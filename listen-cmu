@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+
+import pocketsphinx
+import sys
+
+for phrase in pocketsphinx.LiveSpeech():
+    print(phrase)
+    sys.stdout.flush()

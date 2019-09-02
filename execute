@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import itertools
+import time
+import fileinput
+import pyautogui # better than pynput because pynput doesn't let you send mod+letter
+import yaml
+import art
+from termcolor import colored
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+import pygame # apt-get install python-pygame
+
+sound_effects = True
+mode = 'idle'
+modes = {}
+numbers = {}
+word_replacements = {}
+ignore = ["i"]
+
+extra_key_names = {
+    'space': ' ',
+    'wmkey': 'winleft'
+}
+
+def load_config():
+    global word_replacements, numbers, modes
+
+    with open("replacements.yaml", 'r') as stream:
+        word_replacements = yaml.safe_load(stream)
+    with open("numbers.yaml", 'r') as stream:
+        numbers = yaml.safe_load(stream)
+    with open("modes.yaml", 'r') as stream:
+        modes = yaml.safe_load(stream)
+
+    for mode, aliases in modes.items():
+        redir = [mode]
+        if 'redirect' in aliases:
+            redir += aliases['redirect'].split()
+            del aliases['redirect']
+        for m in redir: aliases[m] = 'switch ' + m
+
+def key_by_name(name):
+    return (extra_key_names[name] if name in extra_key_names else name)
+
+# built-in commands:
+
+def switch_mode(new_mode):
+    global mode
+    mode = new_mode
+
+def press_key(key_name):
+    pyautogui.keyDown(key_by_name(key_name))
+
+def release_key(key_name):
+    pyautogui.keyUp(key_by_name(key_name))
+
+def enter_text(s):
+    pyautogui.press([c for c in s])
+
+def fancy_press(spec):
+    for combo in spec.split(','):
+        times = 1
+        mult = combo.find('*')
+        if mult != -1:
+            times = int(combo[:mult])
+            combo = combo[mult+1:]
+        keys = combo.split('+')
+        if len(keys) == 1:
+            k = key_by_name(keys[0])
+            pyautogui.press([k] * times)
+        else:
+            for i in range(0, times):
+                for k in keys: press_key(k)
+                time.sleep(0.05)
+                for k in reversed(keys): release_key(k)
+
+nullary_builtin_commands = {
+    'stop': lambda: switch_mode('idle')
+}
+
+unary_builtin_commands = {
+    'keydown': press_key,
+    'keyup': release_key,
+    'press': fancy_press,
+    'run': os.popen,
+    'text': enter_text
+}
+
+# command evaluation:
+
+def params_match(params, args):
+    if len(args) < len(params): return False
+    for i in range(0, len(params)):
+        if params[i] == '<word>' or args[i] == params[i]: continue
+        if params[i] == '<number>' and args[i][0].isdigit(): continue
+        return False
+    return True
+
+def handle_alias(words, mode):
+    if words == []: return (0, [], mode)
+    cmd, *rest = words
+    for pattern, expansion in modes[mode].items():
+        params = pattern.split()
+        if params_match(params, words):
+            exp = expansion.split()
+            for i in range(0, len(words)):
+                exp = [tok.replace('$' + str(i), words[i]) for tok in exp]
+            _, acts, mode = process(exp, mode)
+            return (len(params), acts, mode)
+    return (0, [], mode)
+
+def handle_builtin_command(words, mode):
+    if words == []: return (0, [], mode)
+    cmd, *args = words
+    if cmd in nullary_builtin_commands:
+        return (1, [nullary_builtin_commands[cmd]], mode)
+    if args == []: return (0, [], mode)
+    arg, *rest = args
+    if cmd == 'switch': return (2, [lambda: switch_mode(arg)], arg)
+    if cmd in unary_builtin_commands:
+        return (2, [lambda: unary_builtin_commands[cmd](arg)], mode)
+    return (0, [], mode)
+
+def process(words, mode, handle_builtins=True):
+    # returns (n, acts, newmode) where n is how many words were recognized, and acts is a list of actions
+
+    if words == []: return (0, [], mode)
+    cmd, *args = words
+
+    n, acts, mode2 = handle_alias(words, mode)
+    if n != 0:
+        m, acts2, mode3 = process(words[n:], mode2)
+        return (n + m, acts + acts2, mode3)
+
+    if handle_builtins:
+        n, acts, mode2 = handle_builtin_command(words, mode)
+        if n != 0:
+            m, acts2, mode3 = process(words[n:], mode2)
+            return (n + m, acts + acts2, mode3)
+
+    return (0, [], mode)
+
+# input preprocessing:
+
+def replace_numbers(words, collected=''):
+    if words == []: return ([collected] if collected != '' else [])
+    first, *rest = words
+    if first in numbers: return replace_numbers(rest, collected + numbers[first])
+    if collected != '': return [collected, first] + replace_numbers(rest)
+    return [first] + replace_numbers(rest)
+
+def replace_words(words):
+    if words == []: return []
+    for i in range(0, len(words)):
+        for k, vv in word_replacements.items():
+            for v in vv:
+                kw = v.split()
+                if len(words) >= i + len(kw) and words[i:i+len(kw)] == kw:
+                    return words[:i] + [k] + replace_words(words[i+len(kw):])
+    return words
+
+def process_lines(input):
+    print_prompt()
+    for line in input:
+        line = line.rstrip('\n')
+        if line == '' or line[0] == '#' or line in ignore: continue
+
+        load_config()
+
+        words = replace_numbers(replace_words(line.split()))
+        if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
+            words.pop(0)
+
+        if words == []: continue
+
+        handle_builtins = (mode != 'idle')
+        n, acts, _ = process(words, mode, handle_builtins)
+        confirm_input(words, n)
+        for a in acts: a()
+        print_prompt()
+
+# output:
+
+def sound(n, count=1):
+    if count == 0: return
+    pygame.mixer.music.load("sounds/" + n)
+    for i in range(0, count):
+        if sound_effects:
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy(): time.sleep(0.01)
+            time.sleep(0.1)
+
+def print_prompt():
+    print(colored(art.text2art(mode, font='hyper'), 'cyan'))
+    sys.stdout.flush()
+
+def doprint(s, color):
+    print(colored(s if len(s) > 15 else art.text2art(s, font='hyper'), color))
+
+def confirm_input(words, n):
+    if n == 0:
+        print('\n',end='')
+        doprint(' '.join(words), 'yellow')
+        return
+    doprint(' '.join(words[:n]), 'green')
+    if n != len(words):
+        if n != 0: print(' ', end='')
+        doprint(' '.join(words[n:]), 'red')
+
+    sound('good.wav', n)
+    if n != len(words):
+        sound('bad.wav', 1)
+
+pygame.init()
+
+pygame.mixer.music.set_volume(0.03)
+    # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
+
+process_lines(fileinput.input())

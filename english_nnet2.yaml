@@ -1,0 +1,23 @@
+# All the properties nested here correspond to the kaldinnet2onlinedecoder GStreamer plugin properties.
+# Use gst-inspect-1.0 ./libgstkaldionline2.so kaldinnet2onlinedecoder to discover the available properties
+use-threaded-decoder:  true
+model : /opt/models/english/tedlium_nnet_ms_sp_online/final.mdl
+word-syms : /opt/models/english/tedlium_nnet_ms_sp_online/words.txt
+fst : /opt/models/english/tedlium_nnet_ms_sp_online/HCLG.fst
+mfcc-config : /opt/models/english/tedlium_nnet_ms_sp_online/conf/mfcc.conf
+ivector-extraction-config : /opt/models/english/tedlium_nnet_ms_sp_online/conf/ivector_extractor.conf
+max-active: 10000
+beam: 10.0
+lattice-beam: 6.0
+acoustic-scale: 0.083
+do-endpointing : true
+endpoint-silence-phones : "1:2:3:4:5:6:7:8:9:10"
+traceback-period-in-secs: 0.25
+chunk-length-in-secs: 0.25
+num-nbest: 1
+#Additional functionality that you can play with:
+#lm-fst:  test/models/english/tedlium_nnet_ms_sp_online/G.fst
+#big-lm-const-arpa: test/models/english/tedlium_nnet_ms_sp_online/G.carpa
+#phone-syms: test/models/english/tedlium_nnet_ms_sp_online/phones.txt
+#word-boundary-file: test/models/english/tedlium_nnet_ms_sp_online/word_boundary.int
+#do-phone-alignment: true
