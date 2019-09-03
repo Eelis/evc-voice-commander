@@ -150,7 +150,7 @@ def handle_alias(words, mode):
 
     aliases = {}
     for m in get_active_modes(mode):
-        aliases = {**aliases, **modes[m]}
+        aliases = {**modes[m], **aliases}
 
     for pattern, expansion in aliases.items():
         params = pattern.split()
