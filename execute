@@ -135,15 +135,21 @@ def mode_is_auto_enabled(m):
                 return True
     return False
 
+def get_active_modes(mode):
+    r = [mode]
+    if mode != 'idle':
+        for m in modes:
+            if m != mode and mode_is_auto_enabled(m):
+                r.append(m)
+    return r
+
 def handle_alias(words, mode):
     if words == []: return (0, [], mode)
     cmd, *rest = words
 
-    aliases = modes[mode]
-    if mode != 'idle':
-        for m in modes:
-            if mode_is_auto_enabled(m):
-                aliases = {**aliases, **modes[m]}
+    aliases = {}
+    for m in get_active_modes(mode):
+        aliases = {**aliases, **modes[m]}
 
     for pattern, expansion in aliases.items():
         params = pattern.split()
@@ -244,10 +250,11 @@ def sound(n, count=1):
         time.sleep(0.1)
 
 def print_prompt():
-    doprint(mode, 'cyan')
+    global mode
+    doprint('+'.join(get_active_modes(mode)), 'cyan')
 
 def doprint(s, color):
-    print(colored(s + '\n\n' if len(s) > 15 else art.text2art(s, font='hyper'), color), end='')
+    print(colored(s + '\n\n' if len(s) > 17 else art.text2art(s, font='hyper'), color), end='')
 
 def confirm_input(words, n, newmode):
     if n == 0:
