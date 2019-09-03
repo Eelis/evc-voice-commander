@@ -140,11 +140,11 @@ def mode_is_auto_enabled(m):
       current_application in aliases['auto-enable-for-applications'].split()):
         return True
     if 'auto-enable-for-prefixes' in aliases:
-        for prefix in aliases['auto-enable-for-prefixes'].split():
+        for prefix in aliases['auto-enable-for-prefixes']:
             if current_windowtitle.startswith(prefix):
                 return True
     if 'auto-enable-for-suffixes' in aliases:
-        for suffix in aliases['auto-enable-for-suffixes'].split():
+        for suffix in aliases['auto-enable-for-suffixes']:
             if current_windowtitle.endswith(suffix):
                 return True
     return False
