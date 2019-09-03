@@ -54,7 +54,13 @@ def load_config():
             del aliases['redirect-modes']
         if 'forward-keys' in aliases:
             for key in aliases['forward-keys'].split():
-                aliases[key] = 'press ' + key
+                isenum = False
+                for enumname, enumerators in enums.items():
+                    if key == '<' + enumname + '>':
+                        isenum = True
+                        for key in enumerators.split():
+                            aliases[key] = 'press ' + key
+                if not isenum: aliases[key] = 'press ' + key
             del aliases['forward-keys']
         aliases[mode] = 'nop'
 
