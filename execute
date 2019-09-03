@@ -28,11 +28,11 @@ extra_key_names = {
 def load_config():
     global word_replacements, numbers, modes
 
-    with open("replacements.yaml", 'r') as stream:
+    with open("config/replacements.yaml", 'r') as stream:
         word_replacements = yaml.safe_load(stream)
-    with open("numbers.yaml", 'r') as stream:
+    with open("config/numbers.yaml", 'r') as stream:
         numbers = yaml.safe_load(stream)
-    with open("modes.yaml", 'r') as stream:
+    with open("config/modes.yaml", 'r') as stream:
         modes = yaml.safe_load(stream)
 
     for mode, aliases in modes.items():
