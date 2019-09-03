@@ -152,7 +152,8 @@ def handle_builtin_command(words, mode):
         return (1, [nullary_builtin_commands[cmd]], mode)
     if args == []: return (0, [], mode)
     arg, *rest = args
-    if cmd == 'switch': return (2, [lambda: switch_mode(arg)], arg)
+    if cmd == 'switch' and arg in modes:
+        return (2, [lambda: switch_mode(arg)], arg)
     if cmd in unary_builtin_commands:
         return (2, [lambda: unary_builtin_commands[cmd](arg)], mode)
     return (0, [], mode)
