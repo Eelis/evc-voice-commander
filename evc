@@ -1,0 +1,2 @@
+#!/bin/sh
+./listen-kaldi | ./execute
