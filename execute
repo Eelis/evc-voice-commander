@@ -258,15 +258,19 @@ def sound(n, count=1):
         while pygame.mixer.music.get_busy(): time.sleep(0.01)
         time.sleep(0.1)
 
+def short_mode_name(mode):
+    if mode not in modes or 'short-name' not in modes[mode]: return mode
+    return modes[mode]['short-name']
+
 def print_prompt():
     global mode
     time.sleep(0.2)
         # so that window changes take effect, so that the
         # prompt will reflect changes in auto-enabled modes
-    doprint('+'.join(get_active_modes(mode)), 'cyan')
+    doprint('+'.join(map(short_mode_name, get_active_modes(mode))), 'cyan')
 
 def doprint(s, color):
-    print(colored(s + '\n\n' if len(s) > 17 else art.text2art(s, font='hyper'), color), end='')
+    print(colored(s + '\n\n' if len(s) > 17 else art.text2art(s, font='hyper').replace('#','█'), color), end='')
 
 def confirm_input(words, n, newmode):
     if n == 0:
