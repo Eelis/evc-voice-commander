@@ -103,15 +103,26 @@ def params_match(params, args):
         return False
     return True
 
+def mode_is_auto_enabled(m):
+    global current_application, current_windowtitle
+    aliases = modes[m]
+    if ('auto-enable-for-applications' in aliases and
+      current_application in aliases['auto-enable-for-applications'].split()):
+        return True
+    if 'auto-enable-for-prefixes' in aliases:
+        for prefix in aliases['auto-enable-for-prefixes'].split():
+            if current_windowtitle.startswith(prefix):
+                return True
+    return False
+
 def handle_alias(words, mode):
     if words == []: return (0, [], mode)
     cmd, *rest = words
 
     aliases = modes[mode]
-    for m, more_aliases in modes.items():
-        if ('auto-enable-for' in more_aliases and
-           current_application in more_aliases['auto-enable-for']):
-            aliases = {**aliases, **more_aliases}
+    for m in modes:
+        if mode_is_auto_enabled(m):
+            aliases = {**aliases, **modes[m]}
 
     for pattern, expansion in aliases.items():
         params = pattern.split()
