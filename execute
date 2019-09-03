@@ -189,8 +189,8 @@ def process_lines(input):
         current_application = get_current_application()
 
         handle_builtins = (mode != 'idle')
-        n, acts, _ = process(words, mode, handle_builtins)
-        confirm_input(words, n)
+        n, acts, newmode = process(words, mode, handle_builtins)
+        confirm_input(words, n, newmode)
         for a in acts: a()
         print_prompt()
 
@@ -212,12 +212,13 @@ def print_prompt():
 def doprint(s, color):
     print(colored(s if len(s) > 15 else art.text2art(s, font='hyper'), color))
 
-def confirm_input(words, n):
+def confirm_input(words, n, newmode):
     if n == 0:
         print('\n',end='')
         doprint(' '.join(words), 'yellow')
         return
-    doprint(' '.join(words[:n]), 'green')
+    if not (n == 1 and words == [newmode]):
+        doprint(' '.join(words[:n]), 'green')
     if n != len(words):
         if n != 0: print(' ', end='')
         doprint(' '.join(words[n:]), 'red')
