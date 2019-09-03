@@ -88,7 +88,8 @@ unary_builtin_commands = {
     'keyup': release_key,
     'press': fancy_press,
     'run': os.popen,
-    'text': enter_text
+    'text': enter_text,
+    'printline': lambda s: doprint(s, 'magenta')
 }
 
 # command evaluation:
