@@ -79,10 +79,10 @@ def press_key(key_name):
 def release_key(key_name):
     pyautogui.keyUp(key_by_name(key_name))
 
-def enter_text(s):
+def cmd_text(s):
     pyautogui.press([c for c in s])
 
-def fancy_press(spec):
+def cmd_press(spec):
     for combo in spec.split(','):
         times = 1
         mult = combo.find('*')
@@ -99,11 +99,17 @@ def fancy_press(spec):
                 time.sleep(0.05)
                 for k in reversed(keys): release_key(k)
 
-def run_cmd(cmd):
+def cmd_run(cmd):
     subprocess.Popen(cmd, shell=True,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
+
+def cmd_sleep(s):
+    if not s.isdigit():
+        doprint('sleep takes a number', 'red')
+        return
+    time.sleep(int(s))
 
 nullary_builtin_commands = {
     'stop': lambda: switch_mode('idle'),
@@ -113,9 +119,10 @@ nullary_builtin_commands = {
 unary_builtin_commands = {
     'keydown': press_key,
     'keyup': release_key,
-    'press': fancy_press,
-    'run': run_cmd,
-    'text': enter_text,
+    'press': cmd_press,
+    'run': cmd_run,
+    'text': cmd_text,
+    'sleep': cmd_sleep,
     'printline': lambda s: doprint(s, 'magenta')
 }
 
