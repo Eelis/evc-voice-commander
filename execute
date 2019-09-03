@@ -252,6 +252,9 @@ def sound(n, count=1):
 
 def print_prompt():
     global mode
+    time.sleep(0.2)
+        # so that window changes take effect, so that the
+        # prompt will reflect changes in auto-enabled modes
     doprint('+'.join(get_active_modes(mode)), 'cyan')
 
 def doprint(s, color):
