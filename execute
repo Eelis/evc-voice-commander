@@ -20,6 +20,7 @@ mode = 'idle'
 modes = {}
 numbers = {}
 word_replacements = {}
+enums = {}
 ignore = ["i"]
 current_application = ''
 current_windowtitle = ''
@@ -30,7 +31,7 @@ extra_key_names = {
 }
 
 def load_config():
-    global word_replacements, numbers, modes
+    global word_replacements, numbers, modes, enums
 
     with open("config/replacements.yaml", 'r') as stream:
         word_replacements = yaml.safe_load(stream)
@@ -38,6 +39,8 @@ def load_config():
         numbers = yaml.safe_load(stream)
     with open("config/modes.yaml", 'r') as stream:
         modes = yaml.safe_load(stream)
+    with open("config/enums.yaml", 'r') as stream:
+        enums = yaml.safe_load(stream)
 
     for mode, aliases in modes.items():
         redir = [mode]
@@ -107,6 +110,12 @@ def params_match(params, args):
     for i in range(0, len(params)):
         if params[i] == '<word>' or args[i] == params[i]: continue
         if params[i] == '<number>' and args[i][0].isdigit(): continue
+        isenum = False
+        for e in enums:
+            if params[i] == '<' + e + '>':
+                isenum = (args[i] in enums[e])
+                break
+        if isenum: continue
         return False
     return True
 
