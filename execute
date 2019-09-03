@@ -18,7 +18,7 @@ import pygame # apt-get install python-pygame
 
 sound_effects = True
 mode = 'idle'
-modes = {}
+modes = {'idle':{}}
 numbers = {}
 word_replacements = {}
 enums = {}
@@ -31,20 +31,21 @@ extra_key_names = {
     'wmkey': 'winleft'
 }
 
+configdir = os.getenv('HOME') + '/.evc-voice-controller'
+
 def load_config():
     global word_replacements, numbers, modes, enums
-
     try:
-        with open("config/replacements.yaml", 'r') as stream:
+        with open(configdir + '/replacements.yaml', 'r') as stream:
             word_replacements = yaml.safe_load(stream)
-        with open("config/numbers.yaml", 'r') as stream:
+        with open(configdir + '/numbers.yaml', 'r') as stream:
             numbers = yaml.safe_load(stream)
-        with open("config/modes.yaml", 'r') as stream:
+        with open(configdir + '/modes.yaml', 'r') as stream:
             modes = yaml.safe_load(stream)
-        with open("config/enums.yaml", 'r') as stream:
+        with open(configdir + '/enums.yaml', 'r') as stream:
             enums = yaml.safe_load(stream)
-    except:
-        print("(error reloading config)")
+    except Exception as e:
+        print("Error loading config:", e)
         return
 
     for mode, aliases in modes.items():
