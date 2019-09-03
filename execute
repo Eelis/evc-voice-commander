@@ -168,7 +168,7 @@ def replace_words(words):
             for v in vv:
                 kw = v.split()
                 if len(words) >= i + len(kw) and words[i:i+len(kw)] == kw:
-                    return words[:i] + [k] + replace_words(words[i+len(kw):])
+                    return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
 def process_lines(input):
