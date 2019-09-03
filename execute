@@ -8,6 +8,7 @@ import fileinput
 import pyautogui # better than pynput because pynput doesn't let you send mod+letter
 import yaml
 import art
+import psutil
 from termcolor import colored
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
@@ -19,6 +20,7 @@ modes = {}
 numbers = {}
 word_replacements = {}
 ignore = ["i"]
+current_application = ''
 
 extra_key_names = {
     'space': ' ',
@@ -102,7 +104,14 @@ def params_match(params, args):
 def handle_alias(words, mode):
     if words == []: return (0, [], mode)
     cmd, *rest = words
-    for pattern, expansion in modes[mode].items():
+
+    aliases = modes[mode]
+    for m, more_aliases in modes.items():
+        if ('auto-enable-for' in more_aliases and
+           current_application in more_aliases['auto-enable-for']):
+            aliases = {**aliases, **more_aliases}
+
+    for pattern, expansion in aliases.items():
         params = pattern.split()
         if params_match(params, words):
             exp = expansion.split()
@@ -163,6 +172,7 @@ def replace_words(words):
     return words
 
 def process_lines(input):
+    global current_application
     print_prompt()
     for line in input:
         line = line.rstrip('\n')
@@ -175,6 +185,8 @@ def process_lines(input):
             words.pop(0)
 
         if words == []: continue
+
+        current_application = get_current_application()
 
         handle_builtins = (mode != 'idle')
         n, acts, _ = process(words, mode, handle_builtins)
@@ -214,8 +226,12 @@ def confirm_input(words, n):
     if n != len(words):
         sound('bad.wav', 1)
 
-pygame.init()
+def get_current_application():
+    active_win = os.popen('xdotool getactivewindow').read()
+    pid = os.popen('xdotool getwindowpid ' + active_win).read()
+    return psutil.Process(int(pid)).name()
 
+pygame.init()
 pygame.mixer.music.set_volume(0.03)
     # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
 
