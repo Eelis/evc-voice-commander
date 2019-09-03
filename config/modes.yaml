@@ -1,39 +1,37 @@
 idle:
-    redirect: computer focus
+    redirect-modes: computer focus
+    <screen>: focus $0
 
 computer:
-    redirect: focus web edit terminal diagnostics
+    redirect-modes: focus edit terminal diagnostics
+    forward-keys: escape
+    short-name: comp
+
     diagnostic: switch diagnostics
-    web: run /home/eelis/apps/firefox/firefox
+    web: run /home/eelis/apps/firefox/firefox  switch web
+    calendar: run mycalendar  focus
     copy: press control+c
     paste: press control+v
     page up: press pageup
     page down: press pagedown
-    alpha: focus alpha
-    delta: focus delta
-    sigma: focus alpha
-    again: press up,enter
+    <screen>: focus $0  computer
     door: run cctv
-    escape: press escape
+    print <word>: printline $1
 
 diagnostics:
-    redirect: computer
+    redirect-modes: computer
     application: printline $application
 
 focus:
-    redirect: computer edit terminal diagnostics
-    change <word>: mark  $1  attach # 'move' would be better but is poorly recognized by kaldi
+    redirect-modes: computer edit terminal diagnostics mail web
+
+    change <target>: mark  $1  attach # 'move' would be better but is poorly recognized by kaldi
     mark: press wmkey+d
     attach: press wmkey+a
-    alpha: press wmkey+y,1
-    delta:  press wmkey+y,2
-    sigma: press wmkey+y,3
     close: press wmkey+c
     kill: press wmkey+c
-    left: press wmkey+$0
-    right: press wmkey+$0
-    up: press wmkey+$0
-    down: press wmkey+$0
+    <screen>: press wmkey+y,$enumindex0
+    <direction>: press wmkey+$0
     next: press wmkey+tab
     previous: press wmkey+shift+tab
     forward: press wmkey+pagedown
@@ -43,17 +41,31 @@ focus:
 
 # specific applications:
 
+navigating:
+    <number>: text $0  switch web
+    go: press enter
+
+mail:
+    auto-enable-for-applications: thunderbird
+    forward-keys: home delete escape up down
+
+    select <number>: keydown shift  press $1*down,up  keyup shift
+    <number> <direction>: press $0*$1
+
 web:
     auto-enable-for-applications: firefox-bin
-    redirect: computer focus
-    sacrifice: press alt+f,c
+    forward-keys: home escape delete <direction>
+    redirect-modes: computer focus
+
+    erase: press shift+home,delete
+    small: press ctrl+0
+    bigger: press ctrl+0,6*ctrl+shift+=
+    finish: press alt+f,c
     find <word>: press ctrl+f  text $1
-    up: press up
-    down: press down
     back: press backspace
-    escape: press escape
     location: press f6
-    go: press enter
+    go: press escape,f  switch navigating
+    refresh: press f5
     fresh: press f5
     forward: todo
     copy: press control+c
@@ -61,32 +73,53 @@ web:
     page up: press pageup
     page down: press pagedown
     fresh: press control+t
+    next: press control+tab
 
 edit:
-    auto-enable-for-prefixes: 'EDIT:'
-    redirect: computer focus
-    escape: press escape
+    auto-enable-for-prefixes: ['EDIT:']
+    forward-keys: escape insert delete enter <direction>
+    redirect-modes: computer focus
+
     save: press control+s
+    <number> <direction>: press $0*$1
     copy <number>: select $1  press control+c
     paste <number>: go $1  press control+v
     select <number>: escape  press shift+v  text $1  press shift+g
+    go start: escape  text gg
+    go end: escape  text G
     go <number>: escape  text $1  press shift+g
     next buffer: escape  press ctrl+end
     previous buffer: escape  press ctrl+home
+    quit: escape  keydown shift  text zz  keyup shift
+    refresh: press ctrl+l
 
 vlc:
     auto-enable-for-applications: vlc
+
     maximize: press f
     kill: press wmkey+c
     mark: press wmkey+d  focus
+    change <target>: focus change $1
 
 terminal:
     auto-enable-for-applications: urxvt
-    redirect: computer focus
-    up: press up
-    down: press down
+    redirect-modes: computer focus
+    short-name: term
+
+    erase: press ctrl+u
+    <direction>: press $0
+    history: text history  press enter
+    execute <number>: text !$1
     do it: press enter
     again: press up,enter
     page up: press shift+pageup
     page down: press shift+pagedown
     finish: press ctrl+d
+
+gitk:
+    auto-enable-for-suffixes: ['- gitk']
+    redirect-modes: focus
+    forward-keys: <direction>
+    <number> <direction>: press $0*$1
+    change <target>: focus change $1
+    kill: press wmkey+c
