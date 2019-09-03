@@ -43,11 +43,11 @@ def load_config():
         enums = yaml.safe_load(stream)
 
     for mode, aliases in modes.items():
-        redir = [mode]
         if 'redirect' in aliases:
-            redir += aliases['redirect'].split()
+            for m in aliases['redirect'].split():
+                aliases[m] = 'switch ' + m
             del aliases['redirect']
-        for m in redir: aliases[m] = 'switch ' + m
+        aliases[mode] = 'nop'
 
 def key_by_name(name):
     return (extra_key_names[name] if name in extra_key_names else name)
@@ -91,7 +91,8 @@ def run_cmd(cmd):
         stderr=subprocess.PIPE)
 
 nullary_builtin_commands = {
-    'stop': lambda: switch_mode('idle')
+    'stop': lambda: switch_mode('idle'),
+    'nop': lambda: None
 }
 
 unary_builtin_commands = {
