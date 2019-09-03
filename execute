@@ -21,6 +21,7 @@ numbers = {}
 word_replacements = {}
 ignore = ["i"]
 current_application = ''
+current_windowtitle = ''
 
 extra_key_names = {
     'space': ' ',
@@ -116,8 +117,11 @@ def handle_alias(words, mode):
         params = pattern.split()
         if params_match(params, words):
             exp = expansion.split()
-            for i in range(0, len(words)):
-                exp = [tok.replace('$' + str(i), words[i]) for tok in exp]
+            vars = [(str(i), words[i]) for i in range(0, len(words))]
+            vars.append(('application', current_application))
+            vars.append(('windowtitle', current_windowtitle))
+            for varname, varvalue in vars:
+                exp = [tok.replace('$' + varname, varvalue) for tok in exp]
             _, acts, mode = process(exp, mode)
             return (len(params), acts, mode)
     return (0, [], mode)
@@ -187,7 +191,7 @@ def process_lines(input):
 
         if words == []: continue
 
-        current_application = get_current_application()
+        get_current_application()
 
         handle_builtins = (mode != 'idle')
         n, acts, newmode = process(words, mode, handle_builtins)
@@ -229,9 +233,11 @@ def confirm_input(words, n, newmode):
         sound('bad.wav', 1)
 
 def get_current_application():
+    global current_application, current_windowtitle
     active_win = os.popen('xdotool getactivewindow').read()
     pid = os.popen('xdotool getwindowpid ' + active_win).read()
-    return psutil.Process(int(pid)).name()
+    current_application = psutil.Process(int(pid)).name()
+    current_windowtitle = os.popen('xdotool getwindowname ' + active_win).read().strip()
 
 pygame.init()
 pygame.mixer.music.set_volume(0.03)
