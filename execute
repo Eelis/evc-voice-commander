@@ -48,10 +48,10 @@ def load_config():
         return
 
     for mode, aliases in modes.items():
-        if 'redirect' in aliases:
-            for m in aliases['redirect'].split():
+        if 'redirect-modes' in aliases:
+            for m in aliases['redirect-modes'].split():
                 aliases[m] = 'switch ' + m
-            del aliases['redirect']
+            del aliases['redirect-modes']
         if 'forward-keys' in aliases:
             for key in aliases['forward-keys'].split():
                 aliases[key] = 'press ' + key
