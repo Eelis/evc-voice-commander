@@ -1,0 +1,29 @@
+audio input:
+- only record microphone, not all output
+- mute microphone while playing sounds
+- cancel feedback in microphone signal
+- add echo script to easily check microphone output
+- recognize specific voices so that visitors can't control machine without permission
+
+asr:
+- try to get phonemes out of kaldi and play around with those
+- use a custom dictionary with added/removed words
+- try using our command structure to guide kaldi
+
+output:
+- show waveform maybe
+- adapt output to terminal width
+- add TTS
+
+command handling:
+- run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
+- a bad switch/change command should cause an error, not just be not-matched
+- properly diagnose bad variable references, bad keypress specs, etc
+- handle exceptions thrown during command execution, and report them cleanly
+
+features:
+- "what did i say" to play back what was recorded, so you can hear what
+  asr heard, and maybe understand why it didn't understand what you said
+- proper python packaging/building
+- internal line editor with geordi edit commands
+- additional bindings/workflows
