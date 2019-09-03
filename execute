@@ -33,14 +33,18 @@ extra_key_names = {
 def load_config():
     global word_replacements, numbers, modes, enums
 
-    with open("config/replacements.yaml", 'r') as stream:
-        word_replacements = yaml.safe_load(stream)
-    with open("config/numbers.yaml", 'r') as stream:
-        numbers = yaml.safe_load(stream)
-    with open("config/modes.yaml", 'r') as stream:
-        modes = yaml.safe_load(stream)
-    with open("config/enums.yaml", 'r') as stream:
-        enums = yaml.safe_load(stream)
+    try:
+        with open("config/replacements.yaml", 'r') as stream:
+            word_replacements = yaml.safe_load(stream)
+        with open("config/numbers.yaml", 'r') as stream:
+            numbers = yaml.safe_load(stream)
+        with open("config/modes.yaml", 'r') as stream:
+            modes = yaml.safe_load(stream)
+        with open("config/enums.yaml", 'r') as stream:
+            enums = yaml.safe_load(stream)
+    except:
+        print("(error reloading config)")
+        return
 
     for mode, aliases in modes.items():
         if 'redirect' in aliases:
