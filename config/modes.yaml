@@ -1,0 +1,92 @@
+idle:
+    redirect: computer focus
+
+computer:
+    redirect: focus web edit terminal diagnostics
+    diagnostic: switch diagnostics
+    web: run /home/eelis/apps/firefox/firefox
+    copy: press control+c
+    paste: press control+v
+    page up: press pageup
+    page down: press pagedown
+    alpha: focus alpha
+    delta: focus delta
+    sigma: focus alpha
+    again: press up,enter
+    door: run cctv
+    escape: press escape
+
+diagnostics:
+    redirect: computer
+    application: printline $application
+
+focus:
+    redirect: computer edit terminal diagnostics
+    change <word>: mark  $1  attach # 'move' would be better but is poorly recognized by kaldi
+    mark: press wmkey+d
+    attach: press wmkey+a
+    alpha: press wmkey+y,1
+    delta:  press wmkey+y,2
+    sigma: press wmkey+y,3
+    close: press wmkey+c
+    kill: press wmkey+c
+    left: press wmkey+$0
+    right: press wmkey+$0
+    up: press wmkey+$0
+    down: press wmkey+$0
+    next: press wmkey+tab
+    previous: press wmkey+shift+tab
+    forward: press wmkey+pagedown
+    back: press wmkey+pageup
+    new workspace: press wmkey+w
+    split <word>: press wmkey+s,$1
+
+# specific applications:
+
+web:
+    auto-enable-for-applications: firefox-bin
+    redirect: computer focus
+    sacrifice: press alt+f,c
+    find <word>: press ctrl+f  text $1
+    up: press up
+    down: press down
+    back: press backspace
+    escape: press escape
+    location: press f6
+    go: press enter
+    fresh: press f5
+    forward: todo
+    copy: press control+c
+    paste: press control+v
+    page up: press pageup
+    page down: press pagedown
+    fresh: press control+t
+
+edit:
+    auto-enable-for-prefixes: 'EDIT:'
+    redirect: computer focus
+    escape: press escape
+    save: press control+s
+    copy <number>: select $1  press control+c
+    paste <number>: go $1  press control+v
+    select <number>: escape  press shift+v  text $1  press shift+g
+    go <number>: escape  text $1  press shift+g
+    next buffer: escape  press ctrl+end
+    previous buffer: escape  press ctrl+home
+
+vlc:
+    auto-enable-for-applications: vlc
+    maximize: press f
+    kill: press wmkey+c
+    mark: press wmkey+d  focus
+
+terminal:
+    auto-enable-for-applications: urxvt
+    redirect: computer focus
+    up: press up
+    down: press down
+    do it: press enter
+    again: press up,enter
+    page up: press shift+pageup
+    page down: press shift+pagedown
+    finish: press ctrl+d
