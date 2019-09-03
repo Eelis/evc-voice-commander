@@ -143,6 +143,10 @@ def mode_is_auto_enabled(m):
         for prefix in aliases['auto-enable-for-prefixes'].split():
             if current_windowtitle.startswith(prefix):
                 return True
+    if 'auto-enable-for-suffixes' in aliases:
+        for suffix in aliases['auto-enable-for-suffixes'].split():
+            if current_windowtitle.endswith(suffix):
+                return True
     return False
 
 def get_active_modes(mode):
