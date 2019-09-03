@@ -21,7 +21,7 @@ modes = {}
 numbers = {}
 word_replacements = {}
 enums = {}
-ignore = ["i"]
+ignore = ["i", "of", "the", "if"]
 current_application = ''
 current_windowtitle = ''
 
