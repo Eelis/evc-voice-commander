@@ -10,6 +10,7 @@ import pyautogui # better than pynput because pynput doesn't let you send mod+le
 import yaml
 import art
 import psutil
+import asyncio
 from termcolor import colored
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
@@ -225,28 +226,45 @@ def replace_words(words):
                     return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
-def process_lines(input):
-    global current_application
+async def process_lines(input):
+    global mode
+    loop = asyncio.get_event_loop()
+    reader = asyncio.StreamReader(loop=loop, limit=asyncio.streams._DEFAULT_LIMIT)
+    await loop.connect_read_pipe(
+        lambda: asyncio.StreamReaderProtocol(reader, loop=loop), input)
+
     print_prompt()
-    for line in input:
-        line = line.rstrip('\n')
-        if line == '' or line[0] == '#' or line in ignore: continue
+    last_active_modes = get_active_modes(mode)
 
-        load_config()
+    while True:
+        try:
+            line = await asyncio.wait_for(reader.readline(), 0.5)
+        except asyncio.TimeoutError:
+            get_current_application()
+            m = get_active_modes(mode)
+            if last_active_modes != m:
+                last_active_modes = m
+                print_prompt()
+        else:
+            if not line: break # EOF
+            else:
+                line = line.decode('utf-8').rstrip('\n')
+                if line == '' or line[0] == '#' or line in ignore: continue
 
-        words = replace_numbers(replace_words(line.split()))
-        if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
-            words.pop(0)
+                load_config()
 
-        if words == []: continue
+                words = replace_numbers(replace_words(line.split()))
+                if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
+                    words.pop(0)
 
-        get_current_application()
+                if words == []: continue
 
-        handle_builtins = (mode != 'idle')
-        n, acts, newmode = process(words, mode, handle_builtins)
-        confirm_input(words, n, newmode)
-        for a in acts: a()
-        print_prompt()
+                handle_builtins = (mode != 'idle')
+                n, acts, newmode = process(words, mode, handle_builtins)
+                confirm_input(words, n, newmode)
+                for a in acts: a()
+                print_prompt()
+                last_active_modes = get_active_modes(mode)
 
 # output:
 
@@ -264,9 +282,6 @@ def short_mode_name(mode):
 
 def print_prompt():
     global mode
-    time.sleep(0.2)
-        # so that window changes take effect, so that the
-        # prompt will reflect changes in auto-enabled modes
     doprint('+'.join(map(short_mode_name, get_active_modes(mode))), 'cyan')
 
 def doprint(s, color):
@@ -305,4 +320,4 @@ pygame.init()
 pygame.mixer.music.set_volume(0.03)
     # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
 
-process_lines(fileinput.input())
+asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
