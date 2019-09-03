@@ -215,13 +215,12 @@ def process_lines(input):
 # output:
 
 def sound(n, count=1):
-    if count == 0: return
+    if count == 0 or not sound_effects: return
     pygame.mixer.music.load("sounds/" + n)
     for i in range(0, count):
-        if sound_effects:
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy(): time.sleep(0.01)
-            time.sleep(0.1)
+        pygame.mixer.music.play()
+        while pygame.mixer.music.get_busy(): time.sleep(0.01)
+        time.sleep(0.1)
 
 def print_prompt():
     print(colored(art.text2art(mode, font='hyper'), 'cyan'))
