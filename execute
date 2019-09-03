@@ -51,6 +51,10 @@ def load_config():
             for m in aliases['redirect'].split():
                 aliases[m] = 'switch ' + m
             del aliases['redirect']
+        if 'forward-keys' in aliases:
+            for key in aliases['forward-keys'].split():
+                aliases[key] = 'press ' + key
+            del aliases['forward-keys']
         aliases[mode] = 'nop'
 
 def key_by_name(name):
