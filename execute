@@ -81,6 +81,12 @@ def fancy_press(spec):
                 time.sleep(0.05)
                 for k in reversed(keys): release_key(k)
 
+def run_cmd(cmd):
+    subprocess.Popen(cmd, shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
 nullary_builtin_commands = {
     'stop': lambda: switch_mode('idle')
 }
@@ -89,7 +95,7 @@ unary_builtin_commands = {
     'keydown': press_key,
     'keyup': release_key,
     'press': fancy_press,
-    'run': os.popen,
+    'run': run_cmd,
     'text': enter_text,
     'printline': lambda s: doprint(s, 'magenta')
 }
