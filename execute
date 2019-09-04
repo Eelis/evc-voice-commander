@@ -311,7 +311,11 @@ def short_mode_name(mode):
     return modes[mode]['short-name']
 
 def print_prompt():
-    print('{' + ','.join(map(lambda s: colored(short_mode_name(s), 'cyan'), get_active_modes(mode))) + '}')
+    modes = get_active_modes(mode)
+    print(','.join(map(
+        lambda s: colored(short_mode_name(s), 'cyan'),
+        modes)) + '> ', end='')
+    sys.stdout.flush()
 
 def confirm_input(words, n, missing, newmode):
     if n == 0:
