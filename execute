@@ -128,23 +128,24 @@ unary_builtin_commands = {
 
 # command evaluation:
 
-def params_match(params, args):
+def param_matched(param, arg):
+    if param in [arg, '<word>']: return (True, [])
+    if param == '<number>' and arg[0].isdigit(): return (True, [])
+    for e in enums:
+        if param == '<' + e + '>':
+            enumerators = enums[e].split()
+            if arg in enumerators:
+                return (True, [('enumindex' + str(i), str(enumerators.index(arg)))])
+    return (False, [])
+
+def params_matched(params, args):
     vars = []
-    if len(args) < len(params): return (False, [])
     for i in range(0, len(params)):
-        if params[i] == '<word>' or args[i] == params[i]: continue
-        if params[i] == '<number>' and args[i][0].isdigit(): continue
-        isenum = False
-        for e in enums:
-            if params[i] == '<' + e + '>':
-                enumerators = enums[e].split()
-                if args[i] in enumerators:
-                    vars.append(('enumindex' + str(i), str(enumerators.index(args[i]))))
-                    isenum = True
-                    break
-        if isenum: continue
-        return (False, [])
-    return (True, vars)
+        if i == len(args): return (i, vars)
+        b, v = param_matched(params[i], args[i])
+        if not b: return (i, vars)
+        vars += v
+    return (len(params), vars)
 
 def mode_is_auto_enabled(m):
     global current_application, current_windowtitle
@@ -182,16 +183,19 @@ def handle_alias(words, mode):
 
     for pattern, expansion in aliases.items():
         params = pattern.split()
-        match, vars = params_match(params, words)
-        if match:
+        matched, vars = params_matched(params, words)
+        if matched == len(params):
             exp = expansion.split()
-            vars += [(str(i), words[i]) for i in range(0, len(words))]
+            vars += [(str(i), words[i]) for i in range(0, matched)]
             vars.append(('application', current_application))
             vars.append(('windowtitle', current_windowtitle))
             for varname, varvalue in vars:
                 exp = [tok.replace('$' + varname, varvalue) for tok in exp]
             _, acts, mode = process(exp, mode)
-            return (len(params), acts, mode)
+            return (matched, acts, mode)
+        elif matched != 0:
+            return (matched, [], mode)
+
     return (0, [], mode)
 
 def handle_builtin_command(words, mode):
