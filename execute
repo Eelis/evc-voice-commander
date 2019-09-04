@@ -162,6 +162,17 @@ def cmd_press(spec):
                 time.sleep(0.05)
                 for k in reversed(keys): release_key(k)
 
+def is_keyspec(spec):
+    all_keys = pyautogui.KEYBOARD_KEYS + list(extra_key_names.keys())
+    for combo in spec.split(','):
+        mult = combo.find('*')
+        if mult != -1:
+            if not combo[:mult].isdigit(): return False
+            combo = combo[mult+1:]
+        for k in combo.split('+'):
+            if k not in all_keys: return False
+    return True
+
 def cmd_run(cmd):
     subprocess.Popen(cmd, shell=True,
         stdin=subprocess.PIPE,
@@ -184,7 +195,7 @@ builtin_commands = {
     'nop': lambda: None,
     'keydown <word>': press_key,
     'keyup <word>': release_key,
-    'press <word>': cmd_press,
+    'press <keyspec>': cmd_press,
     'run <word>': cmd_run,
     'execute <word>': cmd_execute,
     'text <word>': cmd_text,
@@ -194,9 +205,17 @@ builtin_commands = {
 
 # command evaluation:
 
+builtin_types = {
+    'word': lambda _: True,
+    'number': lambda s: s.isdigit(),
+    'keyspec': is_keyspec
+}
+
 def param_matched(param, arg, i):
-    if param in [arg, '<word>']: return (True, [])
-    if param == '<number>' and arg[0].isdigit(): return (True, [])
+    if param == arg: return (True, [])
+    for type, pred in builtin_types.items():
+        if param == '<' + type + '>' and pred(arg):
+            return (True, [])
     for e in enums:
         if param == '<' + e + '>':
             enumerators = enums[e].split()
