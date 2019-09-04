@@ -169,8 +169,13 @@ def cmd_define(cmd):
             matched, _ = param_matched(pattern.split()[0], cmd, 0)
             if matched:
                 print('\nin', color_mode(m) + ',',
-                    color_commands(pattern), '=',
-                    color_commands(expansion), end='\n\n')
+                    color_commands(pattern), '= ', end='')
+                indent = len(m) + len(pattern) + len("in ,  = ")
+                l = []
+                for e in expansion.split():
+                    l.append((color_commands(e) + ' ', len(e) + 1))
+                (s, w) = l[-1]; l[-1] = (s[:-1], w - 1) # remove last space
+                print(indented_and_wrapped(l, indent), end='\n\n')
                 return
     sound('bad.wav', 1, wait=False)
     print(colored('no such command: ' + cmd, 'red'))
