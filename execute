@@ -202,7 +202,12 @@ def handle_alias(words, mode, include_autoenabled):
                 vars.append(('windowtitle', current_windowtitle))
                 for varname, varvalue in vars:
                     exp = [tok.replace('$' + varname, varvalue) for tok in exp]
-                _, _, acts, mode = process(exp, m, True, False)
+                n, _, acts, mode = process(exp, m, True, False)
+                if n != len(exp):
+                    print("\ncommand", colored(' '.join(words[:matched]), 'green'),
+                        "invoked bad alias",
+                        colored(m, 'cyan') + '/' + colored(pattern, 'magenta') + ':',
+                        colored(expansion, 'red'))
                 return (matched, 0, acts, mode)
             elif matched != 0:
                 missing = len(params) - matched

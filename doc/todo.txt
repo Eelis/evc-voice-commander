@@ -26,3 +26,4 @@ features:
 - proper python packaging/building
 - internal line editor with geordi edit commands
 - additional bindings/workflows
+- line numbers in 'bad alias' errors
