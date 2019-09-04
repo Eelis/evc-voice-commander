@@ -128,7 +128,7 @@ unary_builtin_commands = {
 
 # command evaluation:
 
-def param_matched(param, arg):
+def param_matched(param, arg, i):
     if param in [arg, '<word>']: return (True, [])
     if param == '<number>' and arg[0].isdigit(): return (True, [])
     for e in enums:
@@ -142,7 +142,7 @@ def params_matched(params, args):
     vars = []
     for i in range(0, len(params)):
         if i == len(args): return (i, vars)
-        b, v = param_matched(params[i], args[i])
+        b, v = param_matched(params[i], args[i], i)
         if not b: return (i, vars)
         vars += v
     return (len(params), vars)
@@ -172,7 +172,7 @@ def get_active_modes(mode):
     return r
 
 def handle_alias(words, mode):
-    if words == []: return (0, [], mode)
+    if words == []: return (0, 0, [], mode)
     cmd, *rest = words
 
     aliases = {}
@@ -191,44 +191,51 @@ def handle_alias(words, mode):
             vars.append(('windowtitle', current_windowtitle))
             for varname, varvalue in vars:
                 exp = [tok.replace('$' + varname, varvalue) for tok in exp]
-            _, acts, mode = process(exp, mode)
-            return (matched, acts, mode)
+            _, _, acts, mode = process(exp, mode)
+            return (matched, 0, acts, mode)
         elif matched != 0:
-            return (matched, [], mode)
+            missing = len(params) - matched
+            return (matched, missing, [], mode)
 
-    return (0, [], mode)
+    return (0, 0, [], mode)
 
 def handle_builtin_command(words, mode):
-    if words == []: return (0, [], mode)
+    if words == []: return (0, 0, [], mode)
     cmd, *args = words
     if cmd in nullary_builtin_commands:
-        return (1, [nullary_builtin_commands[cmd]], mode)
-    if args == []: return (0, [], mode)
-    arg, *rest = args
-    if cmd == 'switch' and arg in modes:
-        return (2, [lambda: switch_mode(arg)], arg)
+        return (1, 0, [nullary_builtin_commands[cmd]], mode)
     if cmd in unary_builtin_commands:
-        return (2, [lambda: unary_builtin_commands[cmd](arg)], mode)
-    return (0, [], mode)
+        if args == []: return (1, 1, [], mode)
+        arg, *rest = args
+        return (2, 0, [lambda: unary_builtin_commands[cmd](arg)], mode)
+    if cmd == 'switch':
+        if args == []: return (1, 1, [], mode)
+        arg, *rest = args
+        if arg in modes: return (2, 0, [lambda: switch_mode(arg)], arg)
+    return (0, 0, [], mode)
 
 def process(words, mode, handle_builtins=True):
-    # returns (n, acts, newmode) where n is how many words were recognized, and acts is a list of actions
+    # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
 
-    if words == []: return (0, [], mode)
+    if words == []: return (0, 0, [], mode)
     cmd, *args = words
 
-    n, acts, mode2 = handle_alias(words, mode)
+    n, missing, acts, mode2 = handle_alias(words, mode)
+    if missing != 0:
+        return (n, missing, acts, mode)
     if n != 0:
-        m, acts2, mode3 = process(words[n:], mode2)
-        return (n + m, acts + acts2, mode3)
+        m, missing, acts2, mode3 = process(words[n:], mode2)
+        return (n + m, missing, acts + acts2, mode3)
 
     if handle_builtins:
-        n, acts, mode2 = handle_builtin_command(words, mode)
+        n, missing, acts, mode2 = handle_builtin_command(words, mode)
+        if missing != 0:
+            return (n, missing, acts, mode)
         if n != 0:
-            m, acts2, mode3 = process(words[n:], mode2)
-            return (n + m, acts + acts2, mode3)
+            m, missing, acts2, mode3 = process(words[n:], mode2)
+            return (n + m, missing, acts + acts2, mode3)
 
-    return (0, [], mode)
+    return (0, 0, [], mode)
 
 # input preprocessing:
 
@@ -283,8 +290,8 @@ async def process_lines(input):
                 if words == []: continue
 
                 handle_builtins = (mode != 'idle')
-                n, acts, newmode = process(words, mode, handle_builtins)
-                confirm_input(words, n, newmode)
+                n, missing, acts, newmode = process(words, mode, handle_builtins)
+                confirm_input(words, n, missing, newmode)
                 for a in acts: a()
                 print_prompt()
                 last_active_modes = get_active_modes(mode)
@@ -306,18 +313,20 @@ def short_mode_name(mode):
 def print_prompt():
     print('{' + ','.join(map(lambda s: colored(short_mode_name(s), 'cyan'), get_active_modes(mode))) + '}')
 
-def confirm_input(words, n, newmode):
+def confirm_input(words, n, missing, newmode):
     if n == 0:
         print(colored(' '.join(words), 'yellow'))
         return
-    if not (n == 1 and words == [newmode]):
-        print(colored(' '.join(words[:n]), 'green'))
+    print(colored(' '.join(words[:n]), 'green'), end='')
     if n != len(words):
         if n != 0: print(' ', end='')
-        print(colored(' '.join(words[n:]), 'red'))
+        print(colored(' '.join(words[n:]), 'red'), end='')
+    elif missing != 0:
+        print(colored(' <???>', 'red'), end='')
+    print()
 
     sound('good.wav', n)
-    if n != len(words):
+    if n != len(words) or missing != 0:
         sound('bad.wav', 1)
 
 def simple_subprocess(cmd):

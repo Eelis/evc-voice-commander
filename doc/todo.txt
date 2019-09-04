@@ -17,7 +17,6 @@ output:
 
 command handling:
 - run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
-- a bad switch/change command should cause an error, not just be not-matched
 - properly diagnose bad variable references, bad keypress specs, etc
 - handle exceptions thrown during command execution, and report them cleanly
 
