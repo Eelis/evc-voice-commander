@@ -31,10 +31,39 @@ extra_key_names = {
     'wmkey': 'winleft'
 }
 
+short_mode_names = {}
+
 configdir = os.getenv('HOME') + '/.evc-voice-controller'
 
+auto_enable_for_applications = {}
+auto_enable_for_suffixes = {}
+auto_enable_for_prefixes = {}
+
+
+def mode_is_auto_enabled(m):
+    global current_application, current_windowtitle
+    aliases = modes[m]
+    if ('auto-enable-for-applications' in aliases and
+      current_application in aliases['auto-enable-for-applications'].split()):
+        return True
+    if 'auto-enable-for-prefixes' in aliases:
+        for prefix in aliases['auto-enable-for-prefixes']:
+            if current_windowtitle.startswith(prefix):
+                return True
+    if 'auto-enable-for-suffixes' in aliases:
+        for suffix in aliases['auto-enable-for-suffixes']:
+            if current_windowtitle.endswith(suffix):
+                return True
+    return False
 def load_config():
-    global word_replacements, numbers, modes, enums
+    global word_replacements, numbers, modes, enums, short_mode_names
+    global auto_enable_for_applications
+    global auto_enable_for_suffixes
+    global auto_enable_for_prefixes
+    short_mode_names = {}
+    auto_enable_for_applications = {}
+    auto_enable_for_suffixes = {}
+    auto_enable_for_prefixes = {}
     try:
         with open(configdir + '/replacements.yaml', 'r') as stream:
             word_replacements = yaml.safe_load(stream)
@@ -63,7 +92,18 @@ def load_config():
                             aliases[key] = 'press ' + key
                 if not isenum: aliases[key] = 'press ' + key
             del aliases['forward-keys']
-        aliases[mode] = 'nop'
+        if 'short-name' in aliases:
+            short_mode_names[mode] = aliases['short-name']
+            del aliases['short-name']
+        if 'auto-enable-for-applications' in aliases:
+            auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
+            del aliases['auto-enable-for-applications']
+        if 'auto-enable-for-prefixes' in aliases:
+            auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
+            del aliases['auto-enable-for-prefixes']
+        if 'auto-enable-for-suffixes' in aliases:
+            auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
+            del aliases['auto-enable-for-suffixes']
 
 def key_by_name(name):
     return (extra_key_names[name] if name in extra_key_names else name)
@@ -82,6 +122,27 @@ def release_key(key_name):
 
 def cmd_text(s):
     pyautogui.press([c for c in s])
+
+def cmd_options():
+    mm = [mode]
+    if mode != idle_mode:
+        mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
+    print()
+    for m in mm:
+        print('-', colored(m, 'cyan') + '>', ', '.join(modes[m].keys()), end='\n\n')
+    # todo: built-ins
+
+def cmd_define(cmd):
+    mm = [mode]
+    if mode != idle_mode:
+        mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
+    for m in mm:
+        for pattern, expansion in modes[m].items():
+            if pattern.split()[0] == cmd:
+                print('\n-', colored(m, 'cyan'), pattern, "=", colored(expansion, 'magenta'), end='\n\n')
+                return
+    sound('bad.wav', 1, wait=False)
+    print(colored('no such command: ' + cmd, 'red'))
 
 def cmd_press(spec):
     for combo in spec.split(','):
@@ -124,6 +185,7 @@ def cmd_sleep(s):
 
 nullary_builtin_commands = {
     'stop': lambda: switch_mode(idle_mode),
+    'options': cmd_options,
     'nop': lambda: None
 }
 
@@ -134,6 +196,7 @@ unary_builtin_commands = {
     'run': cmd_run,
     'execute': cmd_execute,
     'text': cmd_text,
+    'define': cmd_define,
     'sleep': cmd_sleep,
     'printline': cmd_printline
 }
@@ -162,15 +225,15 @@ def params_matched(params, args):
 def mode_is_auto_enabled(m):
     global current_application, current_windowtitle
     aliases = modes[m]
-    if ('auto-enable-for-applications' in aliases and
-      current_application in aliases['auto-enable-for-applications'].split()):
+    if (m in auto_enable_for_applications and
+      current_application in auto_enable_for_applications[m]):
         return True
-    if 'auto-enable-for-prefixes' in aliases:
-        for prefix in aliases['auto-enable-for-prefixes']:
+    if m in auto_enable_for_prefixes:
+        for prefix in auto_enable_for_prefixes[m]:
             if current_windowtitle.startswith(prefix):
                 return True
-    if 'auto-enable-for-suffixes' in aliases:
-        for suffix in aliases['auto-enable-for-suffixes']:
+    if m in auto_enable_for_suffixes:
+        for suffix in auto_enable_for_suffixes[m]:
             if current_windowtitle.endswith(suffix):
                 return True
     return False
@@ -206,7 +269,7 @@ def handle_alias(words, mode, include_autoenabled):
                 if n != len(exp):
                     print("\ncommand", colored(' '.join(words[:matched]), 'green'),
                         "invoked bad alias",
-                        colored(m, 'cyan') + '/' + colored(pattern, 'magenta') + ':',
+                        colored(m, 'cyan') + ' ' + colored(pattern, 'magenta') + ':',
                         colored(expansion, 'red'))
                 return (matched, 0, acts, mode)
             elif matched != 0:
@@ -324,8 +387,7 @@ def sound(n, count=1, wait=True):
             time.sleep(0.1)
 
 def short_mode_name(mode):
-    if mode not in modes or 'short-name' not in modes[mode]: return mode
-    return modes[mode]['short-name']
+    return (short_mode_names[mode] if mode in short_mode_names else mode)
 
 def print_prompt():
     modes = get_active_modes(mode)
