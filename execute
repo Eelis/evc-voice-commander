@@ -11,6 +11,7 @@ import yaml
 import psutil
 import asyncio
 import shutil
+import inspect
 from termcolor import colored
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
@@ -293,6 +294,11 @@ def handle_alias(words, mode, include_autoenabled):
 
     return (0, 0, [], mode)
 
+def print_builtin(pattern):
+    func = builtin_commands[pattern]
+    print('\n' + color_commands(pattern), '=')
+    print('\n'.join(map(lambda s: '    ' + s, inspect.getsource(func).split('\n'))))
+
 def handle_builtin_command(words, mode):
     if words == []: return (0, 0, [], mode)
     cmd, *args = words
@@ -314,6 +320,10 @@ def handle_builtin_command(words, mode):
                 if matched > 0:
                     return (1 + matched, 0, [lambda: print_definition(m, pattern)], mode)
                         # 1+ because of 'define' itself
+            for pattern, _ in builtin_commands.items():
+                matched, _ = params_matched(pattern.split(), args)
+                if matched > 0:
+                    return (1 + matched, 0, [lambda: print_builtin(pattern)], mode)
         return (1, 0, [], mode)
     return (0, 0, [], mode)
 
