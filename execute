@@ -178,27 +178,18 @@ def cmd_execute(cmd):
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
     cmd_printline(output)
 
-def cmd_sleep(s):
-    if not s.isdigit():
-        print(colored('sleep takes a number', 'red'))
-        return
-    time.sleep(int(s))
-
-nullary_builtin_commands = {
+builtin_commands = {
     'stop': lambda: switch_mode(idle_mode),
     'options': cmd_options,
-    'nop': lambda: None
-}
-
-unary_builtin_commands = {
-    'keydown': press_key,
-    'keyup': release_key,
-    'press': cmd_press,
-    'run': cmd_run,
-    'execute': cmd_execute,
-    'text': cmd_text,
-    'sleep': cmd_sleep,
-    'printline': cmd_printline
+    'nop': lambda: None,
+    'keydown <word>': press_key,
+    'keyup <word>': release_key,
+    'press <word>': cmd_press,
+    'run <word>': cmd_run,
+    'execute <word>': cmd_execute,
+    'text <word>': cmd_text,
+    'sleep <number>': lambda n: time.sleep(int(n)),
+    'printline <word>': cmd_printline
 }
 
 # command evaluation:
@@ -286,12 +277,13 @@ def handle_alias(words, mode, include_autoenabled):
 def handle_builtin_command(words, mode):
     if words == []: return (0, 0, [], mode)
     cmd, *args = words
-    if cmd in nullary_builtin_commands:
-        return (1, 0, [nullary_builtin_commands[cmd]], mode)
-    if cmd in unary_builtin_commands:
-        if args == []: return (1, 1, [], mode)
-        arg, *rest = args
-        return (2, 0, [lambda: unary_builtin_commands[cmd](arg)], mode)
+    for pattern, func in builtin_commands.items():
+        params = pattern.split()
+        matched, _ = params_matched(params, words)
+        if matched == len(params):
+            return (matched, 0, [lambda: func(*args)], mode)
+        elif matched != 0:
+            return (matched, 0, [], mode)
     if cmd == 'switch':
         if args == []: return (1, 1, [], mode)
         arg, *rest = args
