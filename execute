@@ -183,31 +183,30 @@ def get_active_modes(mode):
                 r.append(m)
     return r
 
-def handle_alias(words, mode):
+def handle_alias(words, mode, include_autoenabled):
     if words == []: return (0, 0, [], mode)
     cmd, *rest = words
 
-    aliases = {}
-    for m in get_active_modes(mode):
-        for pattern, expansion in modes[m].items():
-            if pattern not in aliases:
-                aliases[pattern] = expansion
+    mm = [mode]
+    if include_autoenabled and mode != idle_mode:
+        mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
 
-    for pattern, expansion in aliases.items():
-        params = pattern.split()
-        matched, vars = params_matched(params, words)
-        if matched == len(params):
-            exp = expansion.split()
-            vars += [(str(i), words[i]) for i in range(0, matched)]
-            vars.append(('application', current_application))
-            vars.append(('windowtitle', current_windowtitle))
-            for varname, varvalue in vars:
-                exp = [tok.replace('$' + varname, varvalue) for tok in exp]
-            _, _, acts, mode = process(exp, mode)
-            return (matched, 0, acts, mode)
-        elif matched != 0:
-            missing = len(params) - matched
-            return (matched, missing, [], mode)
+    for m in mm:
+        for pattern, expansion in modes[m].items():
+            params = pattern.split()
+            matched, vars = params_matched(params, words)
+            if matched == len(params):
+                exp = expansion.split()
+                vars += [(str(i), words[i]) for i in range(0, matched)]
+                vars.append(('application', current_application))
+                vars.append(('windowtitle', current_windowtitle))
+                for varname, varvalue in vars:
+                    exp = [tok.replace('$' + varname, varvalue) for tok in exp]
+                _, _, acts, mode = process(exp, m, True, False)
+                return (matched, 0, acts, mode)
+            elif matched != 0:
+                missing = len(params) - matched
+                return (matched, missing, [], mode)
 
     return (0, 0, [], mode)
 
@@ -226,17 +225,17 @@ def handle_builtin_command(words, mode):
         if arg in modes: return (2, 0, [lambda: switch_mode(arg)], arg)
     return (0, 0, [], mode)
 
-def process(words, mode, handle_builtins=True):
+def process(words, mode, handle_builtins, include_autoenabled):
     # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
 
     if words == []: return (0, 0, [], mode)
     cmd, *args = words
 
-    n, missing, acts, mode2 = handle_alias(words, mode)
+    n, missing, acts, mode2 = handle_alias(words, mode, include_autoenabled)
     if missing != 0:
         return (n, missing, acts, mode)
     if n != 0:
-        m, missing, acts2, mode3 = process(words[n:], mode2)
+        m, missing, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
         return (n + m, missing, acts + acts2, mode3)
 
     if handle_builtins:
@@ -244,7 +243,7 @@ def process(words, mode, handle_builtins=True):
         if missing != 0:
             return (n, missing, acts, mode)
         if n != 0:
-            m, missing, acts2, mode3 = process(words[n:], mode2)
+            m, missing, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
             return (n + m, missing, acts + acts2, mode3)
 
     return (0, 0, [], mode)
@@ -302,7 +301,7 @@ async def process_lines(input):
                 if words == []: continue
 
                 handle_builtins = (mode != idle_mode)
-                n, missing, acts, newmode = process(words, mode, handle_builtins)
+                n, missing, acts, newmode = process(words, mode, handle_builtins, True)
                 confirm_input(words, n, missing, newmode)
                 for a in acts: a()
                 print_prompt()
