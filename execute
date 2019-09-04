@@ -298,13 +298,14 @@ async def process_lines(input):
 
 # output:
 
-def sound(n, count=1):
+def sound(n, count=1, wait=True):
     if count == 0 or not sound_effects: return
     pygame.mixer.music.load("sounds/" + n)
     for i in range(0, count):
         pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy(): time.sleep(0.01)
-        time.sleep(0.1)
+        if wait:
+            while pygame.mixer.music.get_busy(): time.sleep(0.01)
+            time.sleep(0.1)
 
 def short_mode_name(mode):
     if mode not in modes or 'short-name' not in modes[mode]: return mode
@@ -331,7 +332,7 @@ def confirm_input(words, n, missing, newmode):
 
     sound('good.wav', n)
     if n != len(words) or missing != 0:
-        sound('bad.wav', 1)
+        sound('bad.wav', 1, wait=False)
 
 def simple_subprocess(cmd):
     p = subprocess.Popen(cmd, shell=True,
