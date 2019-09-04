@@ -147,9 +147,17 @@ def cmd_options():
     for m in mm:
         print('in', color_mode(m) + ': ', end='')
         indent = len(m) + len("in : ")
-        l = [(color_commands(c) + ', ', len(c) + 2) for c in modes[m].keys()]
-        if l != []: (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
-        print(indented_and_wrapped(l, indent), end='\n\n')
+        l = []
+        for pat, exp in modes[m].items():
+            if pat not in modes or exp != 'switch ' + pat:
+                l.append((color_commands(pat) + ', ', len(pat) + 2))
+        for pat, exp in modes[m].items():
+            if pat in modes and exp == 'switch ' + pat:
+                l.append((color_mode(pat) + ', ', len(pat) + 2))
+        if l != []:
+            (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
+            print(indented_and_wrapped(l, indent), end='\n')
+        print()
     # todo: built-ins
 
 def cmd_define(cmd):
