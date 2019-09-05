@@ -132,7 +132,7 @@ def cmd_options():
             if pat not in modes or exp != 'switch ' + pat:
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
         for builtin in builtin_commands.keys():
-            cmd, *params = builtin.split()
+            cmd, *_ = builtin.split()
             if cmd in builtins_enabled[m] and cmd not in global_builtins:
                 l.append((builtin + ', ', len(builtin) + 2))
         for pat, exp in modes[m].items():
@@ -266,6 +266,23 @@ def color_commands(p):
 def color_mode(m):
     return colored(m, 'cyan')
 
+def split_expansion(s):
+    if s == '': return []
+    if s[0] == '"':
+        close = s[1:].find('"') + 1
+        # todo: handle close == -1
+        if close+1 == len(s): return [x]
+        # todo: handle s[close+1]!=' '
+        afterspace = close+1
+        while s[afterspace] == ' ': afterspace += 1
+        x = s[1:close]
+        return [x] + split_expansion(s[afterspace:])
+    space = s.find(' ')
+    if space == -1: return [s]
+    afterspace = space + 1
+    while afterspace < len(s) and s[afterspace] == ' ': afterspace += 1
+    return [s[:space]] + split_expansion(s[afterspace:])
+
 def handle_alias(words, mode, include_autoenabled):
     if words == []: return (0, 0, [], mode)
     cmd, *rest = words
@@ -282,7 +299,7 @@ def handle_alias(words, mode, include_autoenabled):
             params = pattern.split()
             matched, vars = params_matched(params, words)
             if matched == len(params):
-                exp = expansion.split()
+                exp = split_expansion(expansion)
                 vars += [(str(i), words[i]) for i in range(0, matched)]
                 vars.append(('application', current_application))
                 vars.append(('windowtitle', current_windowtitle))
@@ -337,7 +354,7 @@ def handle_builtin_command(words, mode, include_autoenabled, only_enabled=True):
         if arg in modes: return (2, 0, [lambda: switch_mode(arg)], arg)
     if cmd == 'define':
         for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
-            for pattern, expansion in modes[m].items():
+            for pattern in modes[m].keys():
                 matched, _ = params_matched(pattern.split(), args)
                 if matched > 0:
                     return (1 + matched, 0, [lambda: print_definition(m, pattern)], mode)
@@ -457,7 +474,7 @@ def print_definition(mode, pattern):
     print('\nin', color_mode(mode) + ',',
         color_commands(pattern), '= ', end='')
     indent = len(mode) + len(pattern) + len("in ,  = ")
-    l = [(color_commands(e) + ' ', len(e) + 1) for e in expansion.split()]
+    l = [(color_commands(e) + ' ', len(e) + 1) for e in expansion.split()] # todo: handle '' args
     s, w = l[-1]; l[-1] = (s[:-1], w - 1) # remove last space
     print(indented_and_wrapped(l, indent), end='\n\n')
 
