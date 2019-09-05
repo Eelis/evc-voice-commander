@@ -11,8 +11,6 @@ asr:
 - try using our command structure to guide kaldi
 
 output:
-- show waveform maybe
-- adapt output to terminal width
 - add TTS
 
 command handling:
@@ -21,9 +19,10 @@ command handling:
 - handle exceptions thrown during command execution, and report them cleanly
 
 features:
-- "what did i say" to play back what was recorded, so you can hear what
-  asr heard, and maybe understand why it didn't understand what you said
+- "what did i say"/"repeat after me" to play back what was recorded, so you can hear what
+  asr heard, and maybe understand why it doesn't understand what you said
 - proper python packaging/building
 - internal line editor with geordi edit commands
 - additional bindings/workflows
 - line numbers in 'bad alias' errors
+- on startup, let user know when asr is ready for commands
