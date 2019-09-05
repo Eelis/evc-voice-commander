@@ -96,7 +96,7 @@ def load_config():
         if 'auto-enable-for-suffixes' in aliases:
             auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
             del aliases['auto-enable-for-suffixes']
-        builtins_enabled[mode] = global_builtins
+        builtins_enabled[mode] = global_builtins.copy()
         if 'enable-builtins' in aliases:
             builtins_enabled[mode] += aliases['enable-builtins'].split()
             del aliases['enable-builtins']
@@ -131,6 +131,10 @@ def cmd_options():
         for pat, exp in modes[m].items():
             if pat not in modes or exp != 'switch ' + pat:
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
+        for builtin in builtin_commands.keys():
+            cmd, *params = builtin.split()
+            if cmd in builtins_enabled[m] and cmd not in global_builtins:
+                l.append((builtin + ', ', len(builtin) + 2))
         for pat, exp in modes[m].items():
             if pat in modes and exp == 'switch ' + pat:
                 l.append((color_mode(pat) + ', ', len(pat) + 2))
