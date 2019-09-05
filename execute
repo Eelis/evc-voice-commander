@@ -178,7 +178,7 @@ def cmd_run(cmd):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
 
-def cmd_printline(s):
+def cmd_print(s):
     print(colored(s, 'magenta'))
 
 def cmd_execute(cmd):
@@ -186,7 +186,7 @@ def cmd_execute(cmd):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
-    cmd_printline(output)
+    cmd_print(output)
 
 builtin_commands = {
     'stop':
@@ -204,7 +204,7 @@ builtin_commands = {
     'text <word>': cmd_text,
     'sleep <number>':
         lambda n: time.sleep(int(n)),
-    'printline <word>': cmd_printline
+    'print <word>': cmd_print
 } # note: starting the lambdas on a new line above cleans up the output of 'define <builtincmd>'
 
 # command evaluation:
