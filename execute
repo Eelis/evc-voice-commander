@@ -8,6 +8,7 @@ import time
 import fileinput
 import pyautogui # better than pynput because pynput doesn't let you send mod+letter
 import yaml
+import collections
 import psutil
 import asyncio
 import shutil
@@ -27,8 +28,9 @@ numbers = {}
 word_replacements = {}
 enums = {}
 ignore = ["i", "of", "the", "if"]
-current_application = ''
+current_windowpid = ''
 current_windowtitle = ''
+current_windowprocesses = []
 
 debug = False
 
@@ -258,12 +260,32 @@ def params_matched(params, args):
         vars += v
     return (len(params), vars)
 
+def pstree_branch(pid, names, children):
+    r = []
+    if pid in names: r.append(names[pid])
+    if pid in children:
+        for childpid in children[pid]:
+            r += pstree_branch(childpid, names, children)
+    return r
+
+def process_family(pid):
+    children = collections.defaultdict(list)
+    names = {}
+    for p in psutil.process_iter():
+        try:
+            children[p.ppid()].append(p.pid)
+            names[p.pid] = p.name()
+        except (psutil.NoSuchProcess, psutil.ZombieProcess):
+            pass
+    return pstree_branch(pid, names, children)
+
 def mode_is_auto_enabled(m):
-    global current_application, current_windowtitle
     aliases = modes[m]
-    if (m in auto_enable_for_applications and
-      current_application in auto_enable_for_applications[m]):
-        return True
+    if m in auto_enable_for_applications:
+        if current_windowpid != '':
+            for app in auto_enable_for_applications[m]:
+                if app in current_windowprocesses:
+                    return True
     if m in auto_enable_for_prefixes:
         for prefix in auto_enable_for_prefixes[m]:
             if current_windowtitle.startswith(prefix):
@@ -351,7 +373,7 @@ def handle_alias(input, current_mode, include_autoenabled):
 
         exp = split_expansion(expansion)
         vars += [(str(i), w) for i, w in enumerate(input[:longest])]
-        vars.append(('application', current_application))
+        vars.append(('windowpid', current_windowpid))
         vars.append(('windowtitle', current_windowtitle))
         for varname, varvalue in vars:
             exp = [tok.replace('$' + varname, varvalue) for tok in exp]
@@ -597,14 +619,16 @@ def simple_subprocess(cmd):
     return p.stdout.read().decode('utf-8').rstrip()
 
 def get_current_application():
-    global current_application, current_windowtitle
+    global current_windowtitle, current_windowpid, current_windowprocesses
+    current_windowpid = ''
     current_windowtitle = ''
-    current_application = ''
+    current_windowprocesses = []
     active_win = simple_subprocess('xdotool getactivewindow')
     if active_win == '': return
     current_windowtitle = simple_subprocess('xdotool getwindowname ' + active_win)
-    pid = simple_subprocess('xdotool getwindowpid ' + active_win)
-    current_application = (psutil.Process(int(pid)).name() if pid != '' else '')
+    current_windowpid = simple_subprocess('xdotool getwindowpid ' + active_win)
+    if current_windowpid != '':
+        current_windowprocesses = process_family(int(current_windowpid))
 
 ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
 
