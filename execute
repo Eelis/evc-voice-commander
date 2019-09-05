@@ -35,6 +35,12 @@ if len(sys.argv) == 2:
 
 extra_key_names = {
     'space': ' ',
+    'dollar': '$',
+    'ampersand': '&',
+    'hash': '#',
+    'percent': '%',
+    'period': '.',
+    'comma': ',',
     'slash': '/',
     'wmkey': 'winleft'
 }
