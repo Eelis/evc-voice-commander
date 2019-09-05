@@ -648,5 +648,9 @@ pygame.init()
 pygame.mixer.music.set_volume(0.03)
     # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
 
+# hide cursor:
+sys.stdout.write("\033[?25l")
+sys.stdout.flush()
+
 with noalsaerr():
     asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
