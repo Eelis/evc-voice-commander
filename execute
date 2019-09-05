@@ -153,7 +153,6 @@ def cmd_options():
             (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
             print(indented_and_wrapped(l, indent), end='\n')
         print()
-    # todo: built-ins
 
 def cmd_press(spec):
     for combo in spec.split(','):
@@ -303,7 +302,6 @@ def split_expansion(s):
     while afterspace < len(s) and s[afterspace] == ' ': afterspace += 1
     return [s[:space]] + split_expansion(s[afterspace:])
 
-
 def longest_matching_pattern(patterns, input):
     # if multiple patterns match equally well, the first one of them is returned
     # (this is important because it's how commands in the current mode
@@ -333,7 +331,6 @@ def longest_matching_pattern(patterns, input):
         print("best match (" + str(longest) + "):", pattern, " missing:", missing)
 
     return (longest, vars, missing, pattern, result)
-
 
 def handle_alias(input, current_mode, include_autoenabled):
     enabled_modes = [current_mode]
@@ -395,7 +392,7 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
     longest, vars, missing, pattern, f = longest_matching_pattern(patterns, input)
     if longest != 0:
         if missing == 0:
-            acts = [lambda: f(*input[1:longest])]
+            acts = [(f, input[:longest])]
             if pattern == 'switch <mode>': mode = input[1]
                 # this applies the mode switch /during/ command evaluation,
                 # which is beyond the capabilities of regular built-ins,
@@ -503,7 +500,8 @@ async def process_lines(input):
                 handle_builtins = (mode != idle_mode)
                 n, missing, acts, newmode = process(words, mode, handle_builtins, True)
                 confirm_input(words, n, missing, newmode)
-                for a in acts: a()
+                print(', '.join([' '.join(w) for _, w in acts]))
+                for f, w in acts: f(*w[1:])
                 print_prompt()
                 last_active_modes = get_active_modes(mode)
 
