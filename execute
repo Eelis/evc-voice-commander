@@ -44,7 +44,7 @@ auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
 builtins_enabled = {}
 
-global_builtins = ['stop', 'switch', 'define', 'options']
+global_builtins = ['stop', 'switch', 'define', 'options', 'builtin']
 
 def load_config():
     global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled
@@ -311,17 +311,18 @@ def print_builtin(pattern):
     else:
         print('\n' + '\n'.join(map(lambda s: '    ' + s, inspect.getsource(func).split('\n'))))
 
-def handle_builtin_command(words, mode, include_autoenabled):
+def handle_builtin_command(words, mode, include_autoenabled, only_enabled=True):
     if words == []: return (0, 0, [], mode)
     cmd, *args = words
 
-    found = False
-    for m in modes:
-        if m == mode or (include_autoenabled and mode_is_auto_enabled(m)):
-            if m in builtins_enabled and cmd in builtins_enabled[m]:
-                found = True
-                break
-    if not found: return (0, 0, [], mode)
+    if only_enabled:
+        found = False
+        for m in modes:
+            if m == mode or (include_autoenabled and mode_is_auto_enabled(m)):
+                if m in builtins_enabled and cmd in builtins_enabled[m]:
+                    found = True
+                    break
+        if not found: return (0, 0, [], mode)
 
     for pattern, func in builtin_commands.items():
         params = pattern.split()
@@ -346,6 +347,10 @@ def handle_builtin_command(words, mode, include_autoenabled):
                 if matched > 0:
                     return (1 + matched, 0, [lambda: print_builtin(pattern)], mode)
         return (1, 0, [], mode)
+    if cmd == 'builtin':
+        matched, missing, acts, newmode = handle_builtin_command(args, mode, False, False)
+        matched += 1
+        return (matched, missing, acts, newmode)
     return (0, 0, [], mode)
 
 def process(words, mode, handle_builtins, include_autoenabled):
