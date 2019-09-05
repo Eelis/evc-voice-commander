@@ -175,6 +175,9 @@ def cmd_press(spec):
                 time.sleep(0.05)
                 for k in reversed(keys): release_key(k)
 
+def is_keyname(s):
+    return s in pyautogui.KEYBOARD_KEYS or s in extra_key_names
+
 def is_keyspec(spec):
     all_keys = pyautogui.KEYBOARD_KEYS + list(extra_key_names.keys())
     for combo in spec.split(','):
@@ -183,7 +186,7 @@ def is_keyspec(spec):
             if not combo[:mult].isdigit(): return False
             combo = combo[mult+1:]
         for k in combo.split('+'):
-            if k not in all_keys: return False
+            if not is_keyname(k): return False
     return True
 
 def cmd_run(cmd):
@@ -218,9 +221,9 @@ builtin_commands = {
     'options': cmd_options,
     'nop': cmd_nop,
     'switch <mode>': cmd_switch_mode,
-    'keydown <word>': press_key,
-    'keyup <word>': release_key,
-    'press <keyspec>': cmd_press,
+    'keydown <key>': press_key,
+    'keyup <key>': release_key,
+    'press <keys>': cmd_press,
     'run <word>': cmd_run,
     'execute <word>': cmd_execute,
     'text <word>': cmd_text,
@@ -233,7 +236,8 @@ builtin_commands = {
 builtin_types = {
     'word': lambda _: True,
     'number': lambda s: s.isdigit(),
-    'keyspec': is_keyspec,
+    'key': is_keyname,
+    'keys': is_keyspec,
     'mode':
         lambda m: m in modes.keys()
 }
