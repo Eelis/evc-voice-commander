@@ -30,6 +30,8 @@ ignore = ["i", "of", "the", "if"]
 current_application = ''
 current_windowtitle = ''
 
+debug = False
+
 if len(sys.argv) == 2:
     mode = sys.argv[1]
 
@@ -115,9 +117,9 @@ def key_by_name(name):
 
 # built-in commands:
 
-def switch_mode(new_mode):
+def cmd_switch_mode(m):
     global mode
-    mode = new_mode
+    mode = m
 
 def press_key(key_name):
     pyautogui.keyDown(key_by_name(key_name))
@@ -197,22 +199,29 @@ def cmd_execute(cmd):
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
     cmd_print(output)
 
+def cmd_restart():
+    os.execl(sys.argv[0], *sys.argv)
+
+def cmd_nop():
+    pass
+
+def cmd_sleep(n):
+    time.sleep(int(n))
+
 builtin_commands = {
     'stop':
-        lambda: switch_mode(idle_mode),
-    'restart':
-        lambda: os.execl(sys.argv[0], *sys.argv),
+        lambda: cmd_switch_mode(idle_mode),
+    'restart': cmd_restart,
     'options': cmd_options,
-    'nop':
-        lambda: None,
+    'nop': cmd_nop,
+    'switch <mode>': cmd_switch_mode,
     'keydown <word>': press_key,
     'keyup <word>': release_key,
     'press <keyspec>': cmd_press,
     'run <word>': cmd_run,
     'execute <word>': cmd_execute,
     'text <word>': cmd_text,
-    'sleep <number>':
-        lambda n: time.sleep(int(n)),
+    'sleep <number>': cmd_sleep,
     'print <word>': cmd_print
 } # note: starting the lambdas on a new line above cleans up the output of 'define <builtincmd>'
 
@@ -221,7 +230,9 @@ builtin_commands = {
 builtin_types = {
     'word': lambda _: True,
     'number': lambda s: s.isdigit(),
-    'keyspec': is_keyspec
+    'keyspec': is_keyspec,
+    'mode':
+        lambda m: m in modes.keys()
 }
 
 def param_matched(param, arg, i):
@@ -292,39 +303,69 @@ def split_expansion(s):
     while afterspace < len(s) and s[afterspace] == ' ': afterspace += 1
     return [s[:space]] + split_expansion(s[afterspace:])
 
-def handle_alias(words, mode, include_autoenabled):
-    if words == []: return (0, 0, [], mode)
-    cmd, *rest = words
 
-    mm = [mode]
-    if include_autoenabled and mode != idle_mode:
-        mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
+def longest_matching_pattern(patterns, input):
+    # if multiple patterns match equally well, the first one of them is returned
+    # (this is important because it's how commands in the current mode
+    #  override commands in auto-enabled modes)
 
     longest = 0
+    vars = None
     missing = 0
+    pattern = None
+    result = None
 
-    for m in mm:
-        for pattern, expansion in modes[m].items():
-            params = pattern.split()
-            matched, vars = params_matched(params, words)
-            if matched == len(params):
-                exp = split_expansion(expansion)
-                vars += [(str(i), words[i]) for i in range(0, matched)]
-                vars.append(('application', current_application))
-                vars.append(('windowtitle', current_windowtitle))
-                for varname, varvalue in vars:
-                    exp = [tok.replace('$' + varname, varvalue) for tok in exp]
-                n, _, acts, mode = process(exp, m, True, False)
-                if n != len(exp):
-                    print(colored('\nerror: bad alias:', 'red'),
-                        color_mode(m) + ' ' + color_commands(pattern) + ':',
-                        color_commands(expansion))
-                return (matched, 0, acts, mode)
-            elif matched > longest:
-                longest = matched
-                missing = len(params) - matched
+    if debug:
+        print("finding longest pattern matching", input, "among", [p for p, _ in patterns])
 
-    return (longest, missing, [], mode)
+    for p, r in patterns:
+        params = p.split()
+        matched, v = params_matched(params, input)
+        if matched > longest:
+            longest = matched
+            missing = len(params) - matched
+            if missing == 0:
+                pattern = p
+                result = r
+                vars = v
+
+    if debug:
+        print("best match (" + str(longest) + "):", pattern, " missing:", missing)
+
+    return (longest, vars, missing, pattern, result)
+
+
+def handle_alias(input, current_mode, include_autoenabled):
+    enabled_modes = [current_mode]
+    if include_autoenabled and current_mode != idle_mode:
+        enabled_modes += [m for m in modes if m != current_mode and mode_is_auto_enabled(m)]
+
+    patterns = [(pat, (m, exp)) for m in enabled_modes for pat, exp in modes[m].items()]
+
+    longest, vars, missing, pattern, r = longest_matching_pattern(patterns, input)
+
+    acts = []
+    newmode = current_mode
+    if longest != 0 and missing == 0:
+        m, expansion = r
+
+        exp = split_expansion(expansion)
+        vars += [(str(i), w) for i, w in enumerate(input[:longest])]
+        vars.append(('application', current_application))
+        vars.append(('windowtitle', current_windowtitle))
+        for varname, varvalue in vars:
+            exp = [tok.replace('$' + varname, varvalue) for tok in exp]
+
+        matched, _, a, m = process(exp, m, True, False)
+        if matched == len(exp):
+            acts = a
+            newmode = m
+        else:
+            print(colored('\nerror: bad alias:', 'red'),
+                  color_mode(m) + ' ' + color_commands(pattern) + ':',
+                  color_commands(expansion))
+
+    return (longest, missing, acts, newmode)
 
 def print_builtin(pattern):
     func = builtin_commands[pattern]
@@ -337,47 +378,50 @@ def print_builtin(pattern):
     else:
         print('\n' + '\n'.join(map(lambda s: '    ' + s, inspect.getsource(func).split('\n'))))
 
-def handle_builtin_command(words, mode, include_autoenabled, only_enabled=True):
-    if words == []: return (0, 0, [], mode)
-    cmd, *args = words
-
-    if only_enabled:
+def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
+    patterns = []
+    for pat, f in builtin_commands.items():
+        cmd, *_ = pat.split()
         found = False
-        for m in modes:
-            if m == mode or (include_autoenabled and mode_is_auto_enabled(m)):
-                if m in builtins_enabled and cmd in builtins_enabled[m]:
-                    found = True
-                    break
-        if not found: return (0, 0, [], mode)
+        if only_enabled: # find a mode that enables this builtin
+            for m in modes:
+                if m == mode or (include_autoenabled and mode_is_auto_enabled(m)):
+                    if m in builtins_enabled and cmd in builtins_enabled[m]:
+                        found = True
+        else: found = True
+        if found: patterns.append((pat, f))
 
-    for pattern, func in builtin_commands.items():
-        params = pattern.split()
-        matched, _ = params_matched(params, words)
-        if matched == len(params):
-            return (matched, 0, [lambda: func(*args[:(matched - 1)])], mode)
-        elif matched != 0:
-            return (matched, 0, [], mode)
-    if cmd == 'switch':
-        if args == []: return (1, 1, [], mode)
-        arg, *rest = args
-        if arg in modes: return (2, 0, [lambda: switch_mode(arg)], arg)
-    if cmd == 'define':
-        for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
-            for pattern in modes[m].keys():
-                matched, _ = params_matched(pattern.split(), args)
-                if matched > 0:
-                    return (1 + matched, 0, [lambda: print_definition(m, pattern)], mode)
-                        # 1+ because of 'define' itself
-            for pattern, _ in builtin_commands.items():
-                matched, _ = params_matched(pattern.split(), args)
-                if matched > 0:
-                    return (1 + matched, 0, [lambda: print_builtin(pattern)], mode)
-        return (1, 0, [], mode)
-    if cmd == 'builtin':
-        matched, missing, acts, newmode = handle_builtin_command(args, mode, False, False)
-        matched += 1
-        return (matched, missing, acts, newmode)
-    return (0, 0, [], mode)
+    acts = []
+    longest, vars, missing, pattern, f = longest_matching_pattern(patterns, input)
+    if longest != 0:
+        if missing == 0:
+            acts = [lambda: f(*input[1:longest])]
+            if pattern == 'switch <mode>': mode = input[1]
+                # this applies the mode switch /during/ command evaluation,
+                # which is beyond the capabilities of regular built-ins,
+                # since those only produce actions to be executed later.
+                # hence this special case for the 'switch' command.
+
+    elif input != []:
+        cmd, *args = input
+        if cmd == 'define':
+            for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
+                for pattern in modes[m].keys():
+                    matched, _ = params_matched(pattern.split(), args)
+                    if matched > 0:
+                        matched += 1 # because of 'define' itself
+                        return (matched, 0, [(lambda *_: print_definition(m, pattern), input[:matched])], mode)
+                for pattern, _ in builtin_commands.items():
+                    matched, _ = params_matched(pattern.split(), args)
+                    if matched > 0:
+                        return (1 + matched, 0, [lambda: print_builtin(pattern)], mode)
+            return (1, 0, [], mode)
+        elif cmd == 'builtin':
+            matched, missing, acts, newmode = handle_builtin_command(args, mode, False, False)
+            matched += 1
+            return (matched, missing, acts, newmode)
+
+    return (longest, missing, acts, mode)
 
 def process(words, mode, handle_builtins, include_autoenabled):
     # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
@@ -453,6 +497,8 @@ async def process_lines(input):
                     words.pop(0)
 
                 if words == []: continue
+
+                if debug: print()
 
                 handle_builtins = (mode != idle_mode)
                 n, missing, acts, newmode = process(words, mode, handle_builtins, True)
