@@ -13,6 +13,8 @@ import asyncio
 import shutil
 import inspect
 from termcolor import colored
+from ctypes import *
+from contextlib import contextmanager
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame # apt-get install python-pygame
@@ -482,8 +484,23 @@ def get_current_application():
     pid = simple_subprocess('xdotool getwindowpid ' + active_win)
     current_application = (psutil.Process(int(pid)).name() if pid != '' else '')
 
+ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
+
+def py_asound_error_handler(filename, line, function, err, fmt):
+    pass
+
+c_asound_error_handler = ERROR_HANDLER_FUNC(py_asound_error_handler)
+
+@contextmanager
+def noalsaerr():
+    asound = cdll.LoadLibrary('libasound.so')
+    asound.snd_lib_error_set_handler(c_asound_error_handler)
+    yield
+    asound.snd_lib_error_set_handler(None)
+
 pygame.init()
 pygame.mixer.music.set_volume(0.03)
     # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
 
-asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
+with noalsaerr():
+    asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
