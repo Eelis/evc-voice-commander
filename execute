@@ -443,7 +443,7 @@ def indented_and_wrapped(l, n):
     r = ''
     while l != []:
         (s, w) = l[0]
-        if cur + w <= cols:
+        if (cur + w <= cols) or r == '' or r.endswith('\n' + ' ' * n):
             cur += w
             r += s
             l = l[1:]
