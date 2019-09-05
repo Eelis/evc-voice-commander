@@ -89,7 +89,7 @@ def load_config():
 
         for mode, aliases in modes.items():
             if 'redirect-modes' in aliases:
-                for m in aliases['redirect-modes'].split():
+                for m in [mode] + aliases['redirect-modes'].split():
                     aliases[m] = 'builtin switch ' + m
                 del aliases['redirect-modes']
             if 'forward-keys' in aliases:
