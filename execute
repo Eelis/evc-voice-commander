@@ -484,6 +484,7 @@ async def process_lines(input):
             m = get_active_modes(mode)
             if last_active_modes != m:
                 last_active_modes = m
+                clear_line()
                 print_prompt()
         else:
             if not line: break # EOF
@@ -503,9 +504,10 @@ async def process_lines(input):
 
                 handle_builtins = (mode != idle_mode)
                 n, missing, acts, newmode = process(words, mode, handle_builtins, True)
-                confirm_input(words, n, missing, newmode)
-                print(', '.join([' '.join(w) for _, w in acts]))
+                c = confirm_input(words, n, missing, newmode)
+                if acts != []: print(', '.join([' '.join(w) for _, w in acts]))
                 for f, w in acts: f(*w[1:])
+                if c: clear_line()
                 print_prompt()
                 last_active_modes = get_active_modes(mode)
 
@@ -547,18 +549,36 @@ def sound(n, count=1, wait=True):
 def short_mode_name(mode):
     return (short_mode_names[mode] if mode in short_mode_names else mode)
 
+def clear_line():
+    cols = shutil.get_terminal_size().columns
+    print('\r' + ' ' * cols + '\r', end='')
+    sys.stdout.flush()
+
 def print_prompt():
     modes = get_active_modes(mode)
-    print('\r' + ' ' * 50 + '\r' +
-        ','.join(map(
+    print(','.join(map(
         lambda s: color_mode(short_mode_name(s)),
         modes)) + '> ', end='')
     sys.stdout.flush()
 
+def prompt_width():
+    modes = get_active_modes(mode)
+    return len(','.join(map(short_mode_name, modes)) + '> ')
+
+def truncate(s, n):
+    return (s[:n-3] + '...' if len(s) > n else s)
+
 def confirm_input(words, n, missing, newmode):
     if n == 0:
-        print(colored(' '.join(words), 'yellow'))
-        return
+        clear_line()
+        print_prompt()
+        cols = shutil.get_terminal_size().columns
+        print(colored(truncate(' '.join(words), cols - prompt_width()), 'yellow'), end='')
+        print('\r',end='')
+        sys.stdout.flush()
+        return False
+    clear_line()
+    print_prompt()
     print(colored(' '.join(words[:n]), 'green'), end='')
     if n != len(words):
         if n != 0: print(' ', end='')
@@ -570,6 +590,7 @@ def confirm_input(words, n, missing, newmode):
     sound('good.wav', n)
     if n != len(words) or missing != 0:
         sound('bad.wav', 1, wait=False)
+    return True
 
 def simple_subprocess(cmd):
     p = subprocess.Popen(cmd, shell=True,
