@@ -62,11 +62,12 @@ auto_enable_for_leaf_applications = {}
 auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
 builtins_enabled = {}
+global_modes = []
 
 global_builtins = ['stop', 'define', 'options', 'builtin']
 
 def load_config():
-    global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled
+    global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled, global_modes
     global auto_enable_for_applications
     global auto_enable_for_leaf_applications
     global auto_enable_for_suffixes
@@ -77,6 +78,7 @@ def load_config():
     auto_enable_for_suffixes = {}
     auto_enable_for_prefixes = {}
     builtins_enabled = {}
+    global_modes = []
     try:
         with open(configdir + '/replacements.yaml', 'r') as stream:
             word_replacements = yaml.safe_load(stream)
@@ -88,10 +90,6 @@ def load_config():
             enums = yaml.safe_load(stream)
 
         for mode, aliases in modes.items():
-            if 'redirect-modes' in aliases:
-                for m in [mode] + aliases['redirect-modes'].split():
-                    aliases[m] = 'builtin switch ' + m
-                del aliases['redirect-modes']
             if 'forward-keys' in aliases:
                 for pat in aliases['forward-keys'].split():
                     aliases[pat] = 'builtin press $0'
@@ -115,6 +113,14 @@ def load_config():
             if 'enable-builtins' in aliases:
                 builtins_enabled[mode] += aliases['enable-builtins'].split()
                 del aliases['enable-builtins']
+            if 'global-mode' in aliases:
+                if aliases['global-mode']:
+                    global_modes.append(mode)
+                del aliases['global-mode']
+
+        for mode, aliases in modes.items():
+            aliases['|'.join(global_modes)] = 'builtin switch $0'
+
     except Exception as e:
         print("\nerror loading config:", e)
 
@@ -146,7 +152,7 @@ def cmd_options():
         indent = len(m) + len("in : ")
         l = []
         for pat, exp in modes[m].items():
-            if pat not in modes or exp != 'builtin switch ' + pat:
+            if pat != '|'.join(global_modes):
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
         for builtin in builtin_commands.keys():
             cmd, *_ = builtin.split()
@@ -157,8 +163,10 @@ def cmd_options():
                 l.append((color_mode(pat) + ', ', len(pat) + 2))
         if l != []:
             (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
-            print(indented_and_wrapped(l, indent), end='\n')
+            print(indented_and_wrapped(l, indent))
         print()
+    gms = [m for m in global_modes if m not in mm]
+    if gms != []: print('global:', ', '.join(map(color_mode, gms)), end='\n\n')
 
 def cmd_press(spec):
     for combo in spec.split(','):
