@@ -193,6 +193,8 @@ def cmd_execute(cmd):
 builtin_commands = {
     'stop':
         lambda: switch_mode(idle_mode),
+    'restart':
+        lambda: os.execl(sys.argv[0], *sys.argv),
     'options': cmd_options,
     'nop':
         lambda: None,
