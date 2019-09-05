@@ -42,21 +42,6 @@ auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
 
 
-def mode_is_auto_enabled(m):
-    global current_application, current_windowtitle
-    aliases = modes[m]
-    if ('auto-enable-for-applications' in aliases and
-      current_application in aliases['auto-enable-for-applications'].split()):
-        return True
-    if 'auto-enable-for-prefixes' in aliases:
-        for prefix in aliases['auto-enable-for-prefixes']:
-            if current_windowtitle.startswith(prefix):
-                return True
-    if 'auto-enable-for-suffixes' in aliases:
-        for suffix in aliases['auto-enable-for-suffixes']:
-            if current_windowtitle.endswith(suffix):
-                return True
-    return False
 def load_config():
     global word_replacements, numbers, modes, enums, short_mode_names
     global auto_enable_for_applications
