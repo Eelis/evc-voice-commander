@@ -412,7 +412,7 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
                     matched, _ = params_matched(pattern.split(), args)
                     if matched > 0:
                         return (1 + matched, 0, [lambda: print_builtin(pattern)], mode)
-            return (1, 0, [], mode)
+            return (1, 1, [], mode)
         elif cmd == 'builtin':
             matched, missing, acts, newmode = handle_builtin_command(args, mode, False, False)
             matched += 1
