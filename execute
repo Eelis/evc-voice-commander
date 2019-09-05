@@ -69,41 +69,40 @@ def load_config():
             modes = yaml.safe_load(stream)
         with open(configdir + '/enums.yaml', 'r') as stream:
             enums = yaml.safe_load(stream)
-    except Exception as e:
-        print("Error loading config:", e)
-        return
 
-    for mode, aliases in modes.items():
-        if 'redirect-modes' in aliases:
-            for m in aliases['redirect-modes'].split():
-                aliases[m] = 'builtin switch ' + m
-            del aliases['redirect-modes']
-        if 'forward-keys' in aliases:
-            for key in aliases['forward-keys'].split():
-                isenum = False
-                for enumname, enumerators in enums.items():
-                    if key == '<' + enumname + '>':
-                        isenum = True
-                        for key in enumerators.split():
-                            aliases[key] = 'builtin press ' + key
-                if not isenum: aliases[key] = 'builtin press ' + key
-            del aliases['forward-keys']
-        if 'short-name' in aliases:
-            short_mode_names[mode] = aliases['short-name']
-            del aliases['short-name']
-        if 'auto-enable-for-applications' in aliases:
-            auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
-            del aliases['auto-enable-for-applications']
-        if 'auto-enable-for-prefixes' in aliases:
-            auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
-            del aliases['auto-enable-for-prefixes']
-        if 'auto-enable-for-suffixes' in aliases:
-            auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
-            del aliases['auto-enable-for-suffixes']
-        builtins_enabled[mode] = global_builtins.copy()
-        if 'enable-builtins' in aliases:
-            builtins_enabled[mode] += aliases['enable-builtins'].split()
-            del aliases['enable-builtins']
+        for mode, aliases in modes.items():
+            if 'redirect-modes' in aliases:
+                for m in aliases['redirect-modes'].split():
+                    aliases[m] = 'builtin switch ' + m
+                del aliases['redirect-modes']
+            if 'forward-keys' in aliases:
+                for key in aliases['forward-keys'].split():
+                    isenum = False
+                    for enumname, enumerators in enums.items():
+                        if key == '<' + enumname + '>':
+                            isenum = True
+                            for key in enumerators.split():
+                                aliases[key] = 'builtin press ' + key
+                    if not isenum: aliases[key] = 'builtin press ' + key
+                del aliases['forward-keys']
+            if 'short-name' in aliases:
+                short_mode_names[mode] = aliases['short-name']
+                del aliases['short-name']
+            if 'auto-enable-for-applications' in aliases:
+                auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
+                del aliases['auto-enable-for-applications']
+            if 'auto-enable-for-prefixes' in aliases:
+                auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
+                del aliases['auto-enable-for-prefixes']
+            if 'auto-enable-for-suffixes' in aliases:
+                auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
+                del aliases['auto-enable-for-suffixes']
+            builtins_enabled[mode] = global_builtins.copy()
+            if 'enable-builtins' in aliases:
+                builtins_enabled[mode] += aliases['enable-builtins'].split()
+                del aliases['enable-builtins']
+    except Exception as e:
+        print("\nerror loading config:", e)
 
 def key_by_name(name):
     return (extra_key_names[name] if name in extra_key_names else name)
