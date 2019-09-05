@@ -306,7 +306,7 @@ def handle_builtin_command(words, mode):
         params = pattern.split()
         matched, _ = params_matched(params, words)
         if matched == len(params):
-            return (matched, 0, [lambda: func(*args)], mode)
+            return (matched, 0, [lambda: func(*args[:(matched - 1)])], mode)
         elif matched != 0:
             return (matched, 0, [], mode)
     if cmd == 'switch':
