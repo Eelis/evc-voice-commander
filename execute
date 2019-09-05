@@ -237,15 +237,16 @@ builtin_types = {
 }
 
 def param_matched(param, arg, i):
-    if param == arg: return (True, [])
-    for type, pred in builtin_types.items():
-        if param == '<' + type + '>' and pred(arg):
-            return (True, [])
-    for e in enums:
-        if param == '<' + e + '>':
-            enumerators = enums[e].split()
-            if arg in enumerators:
-                return (True, [('enumindex' + str(i), str(enumerators.index(arg)))])
+    for alt in param.split('|'):
+        if alt == arg: return (True, [])
+        for type, pred in builtin_types.items():
+            if alt == '<' + type + '>' and pred(arg):
+                return (True, [])
+        for e in enums:
+            if alt == '<' + e + '>':
+                enumerators = enums[e].split()
+                if arg in enumerators:
+                    return (True, [('enumindex' + str(i), str(enumerators.index(arg)))])
     return (False, [])
 
 def params_matched(params, args):
