@@ -525,7 +525,7 @@ async def process_lines(input):
 
                 handle_builtins = (mode != idle_mode)
                 n, missing, acts, newmode = process(words, mode, handle_builtins, True)
-                c = confirm_input(words, n, missing, newmode)
+                c = confirm_input(words, n, missing, newmode, line)
                 if acts != []: print(', '.join([' '.join(w) for _, w in acts]))
                 for f, w in acts: f(*w[1:])
                 if c: clear_line()
@@ -589,12 +589,12 @@ def prompt_width():
 def truncate(s, n):
     return (s[:n-3] + '...' if len(s) > n else s)
 
-def confirm_input(words, n, missing, newmode):
+def confirm_input(words, n, missing, newmode, original_input):
     if n == 0:
         clear_line()
         print_prompt()
         cols = shutil.get_terminal_size().columns
-        print(colored(truncate(' '.join(words), cols - prompt_width()), 'yellow'), end='')
+        print(colored(truncate(original_input, cols - prompt_width()), 'yellow'), end='')
         print('\r',end='')
         sys.stdout.flush()
         return False
