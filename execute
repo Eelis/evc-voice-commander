@@ -460,10 +460,11 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
                     if matched > 0:
                         matched += 1 # because of 'define' itself
                         return (matched, 0, [(lambda *_: print_definition(m, pattern), input[:matched])], mode)
-                for pattern, _ in builtin_commands.items():
-                    matched, _ = params_matched(pattern.split(), args)
-                    if matched > 0:
-                        return (1 + matched, 0, [lambda: print_builtin(pattern)], mode)
+            for pattern, _ in builtin_commands.items():
+                matched, _ = params_matched(pattern.split(), args)
+                if matched > 0:
+                    matched += 1
+                    return (matched, 0, [(lambda *_: print_builtin(pattern), input[:matched])], mode)
             return (1, 1, [], mode)
         elif cmd == 'builtin':
             matched, missing, acts, newmode = handle_builtin_command(args, mode, False, False)
