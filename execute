@@ -48,7 +48,7 @@ auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
 builtins_enabled = {}
 
-global_builtins = ['stop', 'switch', 'define', 'options', 'builtin']
+global_builtins = ['stop', 'define', 'options', 'builtin']
 
 def load_config():
     global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled
@@ -76,7 +76,7 @@ def load_config():
     for mode, aliases in modes.items():
         if 'redirect-modes' in aliases:
             for m in aliases['redirect-modes'].split():
-                aliases[m] = 'switch ' + m
+                aliases[m] = 'builtin switch ' + m
             del aliases['redirect-modes']
         if 'forward-keys' in aliases:
             for key in aliases['forward-keys'].split():
@@ -133,14 +133,14 @@ def cmd_options():
         indent = len(m) + len("in : ")
         l = []
         for pat, exp in modes[m].items():
-            if pat not in modes or exp != 'switch ' + pat:
+            if pat not in modes or exp != 'builtin switch ' + pat:
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
         for builtin in builtin_commands.keys():
             cmd, *_ = builtin.split()
             if cmd in builtins_enabled[m] and cmd not in global_builtins:
                 l.append((builtin + ', ', len(builtin) + 2))
         for pat, exp in modes[m].items():
-            if pat in modes and exp == 'switch ' + pat:
+            if pat in modes and exp == 'builtin switch ' + pat:
                 l.append((color_mode(pat) + ', ', len(pat) + 2))
         if l != []:
             (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
