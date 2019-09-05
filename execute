@@ -30,8 +30,12 @@ ignore = ["i", "of", "the", "if"]
 current_application = ''
 current_windowtitle = ''
 
+if len(sys.argv) == 2:
+    mode = sys.argv[1]
+
 extra_key_names = {
     'space': ' ',
+    'slash': '/',
     'wmkey': 'winleft'
 }
 
@@ -374,7 +378,7 @@ def process(words, mode, handle_builtins, include_autoenabled):
     # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
 
     if words == []: return (0, 0, [], mode)
-    cmd, *args = words
+    cmd, *_ = words
 
     n, missing, acts, mode2 = handle_alias(words, mode, include_autoenabled)
     if missing != 0:
