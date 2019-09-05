@@ -32,8 +32,12 @@ current_windowtitle = ''
 
 debug = False
 
-if len(sys.argv) == 2:
-    mode = sys.argv[1]
+args = sys.argv[1:]
+if args != [] and args[0] == '--debug':
+    debug = True
+    args = args[1:]
+if len(args) == 1:
+    mode = args[0]
 
 extra_key_names = {
     'space': ' ',
