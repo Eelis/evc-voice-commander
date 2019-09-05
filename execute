@@ -218,6 +218,9 @@ def cmd_execute(cmd):
 def cmd_restart():
     os.execl(sys.argv[0], *sys.argv)
 
+def cmd_exit():
+    sys.exit(0)
+
 def cmd_nop():
     pass
 
@@ -228,6 +231,7 @@ builtin_commands = {
     'stop':
         lambda: cmd_switch_mode(idle_mode),
     'restart': cmd_restart,
+    'shutdown': cmd_exit,
     'options': cmd_options,
     'nop': cmd_nop,
     'switch <mode>': cmd_switch_mode,
