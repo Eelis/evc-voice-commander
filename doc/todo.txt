@@ -23,7 +23,10 @@ features:
   asr heard, and maybe understand why it doesn't understand what you said
 - proper python packaging/building
 - internal line editor with geordi edit commands
-- additional bindings/workflows
+- additional bindings/workflows:
+    - readline CLIs?
+    - Qt/Gnome apps?
 - line numbers in 'bad alias' errors
 - on startup, let user know when asr is ready for commands
 - "define type"
+- have output as an OSD-style overlay window

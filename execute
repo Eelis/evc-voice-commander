@@ -229,6 +229,7 @@ def cmd_restart():
     os.execl(sys.argv[0], *sys.argv)
 
 def cmd_exit():
+    sys.stdout.write("\033[?25h") # restore cursor
     sys.exit(0)
 
 def cmd_nop():
@@ -698,9 +699,9 @@ pygame.init()
 pygame.mixer.music.set_volume(0.03)
     # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
 
-# hide cursor:
-sys.stdout.write("\033[?25l")
-sys.stdout.flush()
+sys.stdout.write("\033[?25l") # hide cursor:
 
 with noalsaerr():
     asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
+
+sys.stdout.write("\033[?25h") # restore cursor
