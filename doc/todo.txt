@@ -19,7 +19,6 @@ command handling:
 - run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
 - properly diagnose bad variable references
 - handle exceptions thrown during command execution, and report them cleanly
-- make built-ins opt-in per mode
 
 features:
 - "what did i say" to play back what was recorded, so you can hear what

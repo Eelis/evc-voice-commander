@@ -42,10 +42,12 @@ configdir = os.getenv('HOME') + '/.evc-voice-controller'
 auto_enable_for_applications = {}
 auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
+builtins_enabled = {}
 
+global_builtins = ['stop', 'switch', 'define', 'options']
 
 def load_config():
-    global word_replacements, numbers, modes, enums, short_mode_names
+    global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled
     global auto_enable_for_applications
     global auto_enable_for_suffixes
     global auto_enable_for_prefixes
@@ -53,6 +55,7 @@ def load_config():
     auto_enable_for_applications = {}
     auto_enable_for_suffixes = {}
     auto_enable_for_prefixes = {}
+    builtins_enabled = {}
     try:
         with open(configdir + '/replacements.yaml', 'r') as stream:
             word_replacements = yaml.safe_load(stream)
@@ -93,6 +96,10 @@ def load_config():
         if 'auto-enable-for-suffixes' in aliases:
             auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
             del aliases['auto-enable-for-suffixes']
+        builtins_enabled[mode] = global_builtins
+        if 'enable-builtins' in aliases:
+            builtins_enabled[mode] += aliases['enable-builtins'].split()
+            del aliases['enable-builtins']
 
 def key_by_name(name):
     return (extra_key_names[name] if name in extra_key_names else name)
@@ -297,9 +304,18 @@ def print_builtin(pattern):
     else:
         print('\n' + '\n'.join(map(lambda s: '    ' + s, inspect.getsource(func).split('\n'))))
 
-def handle_builtin_command(words, mode):
+def handle_builtin_command(words, mode, include_autoenabled):
     if words == []: return (0, 0, [], mode)
     cmd, *args = words
+
+    found = False
+    for m in modes:
+        if m == mode or (include_autoenabled and mode_is_auto_enabled(m)):
+            if m in builtins_enabled and cmd in builtins_enabled[m]:
+                found = True
+                break
+    if not found: return (0, 0, [], mode)
+
     for pattern, func in builtin_commands.items():
         params = pattern.split()
         matched, _ = params_matched(params, words)
@@ -339,7 +355,7 @@ def process(words, mode, handle_builtins, include_autoenabled):
         return (n + m, missing, acts + acts2, mode3)
 
     if handle_builtins:
-        n, missing, acts, mode2 = handle_builtin_command(words, mode)
+        n, missing, acts, mode2 = handle_builtin_command(words, mode, include_autoenabled)
         if missing != 0:
             return (n, missing, acts, mode)
         if n != 0:
