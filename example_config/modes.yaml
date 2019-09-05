@@ -1,29 +1,33 @@
-idle:
+stopped:
     redirect-modes: computer focus
     <screen>: focus $0
 
 computer:
-    redirect-modes: focus edit terminal diagnostics
-    forward-keys: escape
     short-name: comp
+    redirect-modes: focus edit terminal diagnostic mail web
+    forward-keys: escape
+    enable-builtins: run print switch
 
-    diagnostic: switch diagnostics
-    web: run /home/eelis/apps/firefox/firefox  switch web
+    new browser: run firefox  switch web
+    new terminal: run urxvt  switch terminal
     calendar: run mycalendar  focus
-    copy: press control+c
-    paste: press control+v
+    copy: press ctrl+c
+    paste: press ctrl+v
     page up: press pageup
     page down: press pagedown
     <screen>: focus $0  computer
     door: run cctv
-    print <word>: printline $1
+    date: execute $0
 
-diagnostics:
-    redirect-modes: computer
-    application: printline $application
+diagnostic:
+    redirect-modes: computer focus
+    enable-builtins: restart print
+
+    application: print $application
 
 focus:
-    redirect-modes: computer edit terminal diagnostics mail web
+    enable-builtins: press
+    redirect-modes: computer edit terminal diagnostic mail web
 
     change <target>: mark  $1  attach # 'move' would be better but is poorly recognized by kaldi
     mark: press wmkey+d
@@ -37,25 +41,29 @@ focus:
     forward: press wmkey+pagedown
     back: press wmkey+pageup
     new workspace: press wmkey+w
-    split <word>: press wmkey+s,$1
+    split <direction>: press wmkey+s,$1
+    join: press wmkey+v
 
 # specific applications:
-
-navigating:
-    <number>: text $0  switch web
-    go: press enter
 
 mail:
     auto-enable-for-applications: thunderbird
     forward-keys: home delete escape up down
+    redirect-modes: focus
 
+    next: press f
     select <number>: keydown shift  press $1*down,up  keyup shift
     <number> <direction>: press $0*$1
+
+web-navigate:
+    <number>: builtin text $0  builtin switch web
+    go: builtin press enter
 
 web:
     auto-enable-for-applications: firefox-bin
     forward-keys: home escape delete <direction>
     redirect-modes: computer focus
+    enable-builtins: press
 
     erase: press shift+home,delete
     small: press ctrl+0
@@ -64,37 +72,62 @@ web:
     find <word>: press ctrl+f  text $1
     back: press backspace
     location: press f6
-    go: press escape,f  switch navigating
+    go: press escape,f  builtin switch web-navigate
     refresh: press f5
     fresh: press f5
     forward: todo
-    copy: press control+c
-    paste: press control+v
+    copy: press ctrl+c
+    paste: press ctrl+v
     page up: press pageup
     page down: press pagedown
-    fresh: press control+t
-    next: press control+tab
+    fresh: press ctrl+t
+    next: builtin press ctrl+tab
+
+edit-find:
+    forward-keys: slash backspace
+
+    go: builtin press enter  builtin switch edit
+    escape: builtin press escape  builtin switch edit
+    cancel: escape
+    edit: escape
+    delete word: builtin press ctrl+w
+
+edit-insert:
+    escape: builtin press escape  builtin switch edit
+    forward-keys: slash space semicolon backspace period dollar percent
+    enable-builtins: text
+        # text is not in edit itself because in view mode, entering a textual word makes no sense
 
 edit:
     auto-enable-for-prefixes: ['EDIT:']
-    forward-keys: escape insert delete enter <direction>
+    forward-keys: escape delete enter <direction>
     redirect-modes: computer focus
+    enable-builtins: press
 
-    save: press control+s
+    undo: press escape,u
+    redo: press escape,ctrl+r
+    save: press ctrl+s
+    find: press escape,slash  builtin switch edit-find
     <number> <direction>: press $0*$1
-    copy <number>: select $1  press control+c
-    paste <number>: go $1  press control+v
+    copy <number>: select $1  press ctrl+c
+    paste <number>: go $1  press ctrl+v
     select <number>: escape  press shift+v  text $1  press shift+g
-    go start: escape  text gg
-    go end: escape  text G
-    go <number>: escape  text $1  press shift+g
+    start of file: press escape,g,g
+    start of line: press home
+    end of line: press end
+    end of file: press escape,shift+g
+    go <number>: escape  builtin text $1  press shift+g
     next buffer: escape  press ctrl+end
     previous buffer: escape  press ctrl+home
+    next match: escape  press n
+    previous match: escape  press shift+n
     quit: escape  keydown shift  text zz  keyup shift
     refresh: press ctrl+l
+    insert: press insert  builtin switch edit-insert
 
 vlc:
     auto-enable-for-applications: vlc
+    redirect-modes: focus
 
     maximize: press f
     kill: press wmkey+c
@@ -105,6 +138,7 @@ terminal:
     auto-enable-for-applications: urxvt
     redirect-modes: computer focus
     short-name: term
+    enable-builtins: press
 
     erase: press ctrl+u
     <direction>: press $0
