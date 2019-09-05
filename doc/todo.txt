@@ -26,3 +26,4 @@ features:
 - additional bindings/workflows
 - line numbers in 'bad alias' errors
 - on startup, let user know when asr is ready for commands
+- "define type"
