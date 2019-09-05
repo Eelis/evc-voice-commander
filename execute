@@ -30,7 +30,7 @@ enums = {}
 ignore = ["i", "of", "the", "if"]
 current_windowpid = ''
 current_windowtitle = ''
-current_windowprocesses = []
+current_windowprocesses = {}
 
 debug = False
 
@@ -58,6 +58,7 @@ short_mode_names = {}
 configdir = os.getenv('HOME') + '/.evc-voice-controller'
 
 auto_enable_for_applications = {}
+auto_enable_for_leaf_applications = {}
 auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
 builtins_enabled = {}
@@ -67,10 +68,12 @@ global_builtins = ['stop', 'define', 'options', 'builtin']
 def load_config():
     global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled
     global auto_enable_for_applications
+    global auto_enable_for_leaf_applications
     global auto_enable_for_suffixes
     global auto_enable_for_prefixes
     short_mode_names = {}
     auto_enable_for_applications = {}
+    auto_enable_for_leaf_applications = {}
     auto_enable_for_suffixes = {}
     auto_enable_for_prefixes = {}
     builtins_enabled = {}
@@ -99,6 +102,9 @@ def load_config():
             if 'auto-enable-for-applications' in aliases:
                 auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
                 del aliases['auto-enable-for-applications']
+            if 'auto-enable-for-leaf-applications' in aliases:
+                auto_enable_for_leaf_applications[mode] = aliases['auto-enable-for-leaf-applications'].split()
+                del aliases['auto-enable-for-leaf-applications']
             if 'auto-enable-for-prefixes' in aliases:
                 auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
                 del aliases['auto-enable-for-prefixes']
@@ -260,12 +266,13 @@ def params_matched(params, args):
         vars += v
     return (len(params), vars)
 
-def pstree_branch(pid, names, children):
-    r = []
-    if pid in names: r.append(names[pid])
-    if pid in children:
-        for childpid in children[pid]:
-            r += pstree_branch(childpid, names, children)
+def pstree_branch(pids, names, children):
+    r = {}
+    for pid in pids:
+        name = (names[pid] if pid in names else '?')
+        b = (pstree_branch(children[pid], names, children) if pid in children else {})
+        b['name'] = name
+        r[pid] = b
     return r
 
 def process_family(pid):
@@ -277,15 +284,35 @@ def process_family(pid):
             names[p.pid] = p.name()
         except (psutil.NoSuchProcess, psutil.ZombieProcess):
             pass
-    return pstree_branch(pid, names, children)
+    start = [pid]
+    return pstree_branch(start, names, children)
+
+def occurs_in_branch(x, processes):
+    for k, v in processes.items():
+        if k == 'name':
+            if v == x: return True
+        elif occurs_in_branch(x, v):
+            return True
+    return False
+
+def occurs_as_leaf_in_branch(x, processes):
+    if len(processes) == 1 and 'name' in processes and processes['name'] == x:
+        return True
+    for k, v in processes.items():
+        if k != 'name' and occurs_as_leaf_in_branch(x, v):
+            return True
+    return False
 
 def mode_is_auto_enabled(m):
     aliases = modes[m]
     if m in auto_enable_for_applications:
-        if current_windowpid != '':
-            for app in auto_enable_for_applications[m]:
-                if app in current_windowprocesses:
-                    return True
+        for app in auto_enable_for_applications[m]:
+            if occurs_in_branch(app, current_windowprocesses):
+                return True
+    if m in auto_enable_for_leaf_applications:
+        for app in auto_enable_for_leaf_applications[m]:
+            if occurs_as_leaf_in_branch(app, current_windowprocesses):
+                return True
     if m in auto_enable_for_prefixes:
         for prefix in auto_enable_for_prefixes[m]:
             if current_windowtitle.startswith(prefix):
@@ -622,7 +649,7 @@ def get_current_application():
     global current_windowtitle, current_windowpid, current_windowprocesses
     current_windowpid = ''
     current_windowtitle = ''
-    current_windowprocesses = []
+    current_windowprocesses = {}
     active_win = simple_subprocess('xdotool getactivewindow')
     if active_win == '': return
     current_windowtitle = simple_subprocess('xdotool getwindowname ' + active_win)
