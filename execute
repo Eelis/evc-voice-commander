@@ -88,14 +88,8 @@ def load_config():
                     aliases[m] = 'builtin switch ' + m
                 del aliases['redirect-modes']
             if 'forward-keys' in aliases:
-                for key in aliases['forward-keys'].split():
-                    isenum = False
-                    for enumname, enumerators in enums.items():
-                        if key == '<' + enumname + '>':
-                            isenum = True
-                            for key in enumerators.split():
-                                aliases[key] = 'builtin press ' + key
-                    if not isenum: aliases[key] = 'builtin press ' + key
+                for pat in aliases['forward-keys'].split():
+                    aliases[pat] = 'builtin press $0'
                 del aliases['forward-keys']
             if 'short-name' in aliases:
                 short_mode_names[mode] = aliases['short-name']
