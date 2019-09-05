@@ -147,8 +147,8 @@ def cmd_options():
     if mode != idle_mode:
         mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
     print()
+    builtins_displayed = []
     for m in mm:
-        print('in', color_mode(m) + ': ', end='')
         indent = len(m) + len("in : ")
         l = []
         for pat, exp in modes[m].items():
@@ -156,15 +156,16 @@ def cmd_options():
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
         for builtin in builtin_commands.keys():
             cmd, *_ = builtin.split()
-            if cmd in builtins_enabled[m] and cmd not in global_builtins:
+            if cmd in builtins_enabled[m] and cmd not in global_builtins and cmd not in builtins_displayed:
+                builtins_displayed.append(cmd)
                 l.append((builtin + ', ', len(builtin) + 2))
         for pat, exp in modes[m].items():
             if pat in modes and pat != m and exp == 'builtin switch ' + pat:
                 l.append((color_mode(pat) + ', ', len(pat) + 2))
         if l != []:
+            print('in', color_mode(m) + ': ', end='')
             (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
-            print(indented_and_wrapped(l, indent))
-        print()
+            print(indented_and_wrapped(l, indent), end='\n\n')
     gms = [m for m in global_modes if m not in mm]
     if gms != []: print('global:', ', '.join(map(color_mode, gms)), end='\n\n')
 
