@@ -85,8 +85,8 @@ def load_config():
                     if key == '<' + enumname + '>':
                         isenum = True
                         for key in enumerators.split():
-                            aliases[key] = 'press ' + key
-                if not isenum: aliases[key] = 'press ' + key
+                            aliases[key] = 'builtin press ' + key
+                if not isenum: aliases[key] = 'builtin press ' + key
             del aliases['forward-keys']
         if 'short-name' in aliases:
             short_mode_names[mode] = aliases['short-name']
