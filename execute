@@ -206,6 +206,28 @@ def cmd_define(_, *cmd):
         if matched > 0 and not bad:
             print_builtin(pattern)
 
+def italic_types(pattern):
+    with_markup = '/'.join(
+            [' '.join(
+                ['|'.join(
+                    [ ("\x1B[3m"+alt[1:-1]+"\x1B[23m" if alt.startswith('<') else alt)
+                        for alt in param.split('|')
+                    ])
+                    for param in form.split(' ')
+                ])
+                for form in pattern.split('/')])
+    wo_markup = '/'.join(
+            [' '.join(
+                ['|'.join(
+                    [ (alt[1:-1] if alt.startswith('<') else alt)
+                        for alt in param.split('|')
+                    ])
+                    for param in form.split(' ')
+                ])
+                for form in pattern.split('/')])
+
+    return (with_markup, wo_markup)
+
 @make_builtin('options')
 def cmd_options(_):
     mm = [mode]
@@ -213,6 +235,15 @@ def cmd_options(_):
         mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
     print()
     builtins_displayed = []
+
+    def command_pattern(pat):
+        w, wo = italic_types(pat)
+        return (color_commands(w) + ', ', len(wo) + 2)
+
+    def simple_pattern(pat):
+        w, wo = italic_types(pat)
+        return (w + ', ', len(wo) + 2)
+
     for m in mm:
         indent = len(m) + len("in : ")
         l = []
@@ -221,15 +252,15 @@ def cmd_options(_):
             if pat == '|'.join(global_modes): continue
             if exp == 'builtin $*':
                 for form in pat.split('/'):
-                    simples.append((form + ', ', len(form) + 2))
+                    simples.append(simple_pattern(form))
             elif exp == 'builtin press $0':
                 if len(pat.split()) == 1:
                     for alt in pat.split('|'):
-                        simples.append((alt + ', ', len(alt) + 2))
+                        simples.append(simple_pattern(alt))
                 else:
-                    simples.append((pat + ', ', len(pat) + 2))
+                    simples.append(simple_pattern(pat))
             else:
-                l.append((color_commands(pat) + ', ', len(pat) + 2))
+                l.append(command_pattern(pat))
         l += simples
         for pat, exp in modes[m].items():
             if pat in modes and pat != m and exp == 'builtin switch ' + pat:
@@ -239,8 +270,12 @@ def cmd_options(_):
             (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
             print(indented_and_wrapped(l, indent), end='\n\n')
 
+    def pp(b):
+        w, wo = italic_types(b)
+        return (w + ', ', len(wo) + 2)
+
     l = ([(color_mode(m) + ', ', len(m) + 2) for m in global_modes if m not in mm] +
-         [(builtin + ', ', len(builtin) + 2) for builtin in builtin_commands.keys() if is_global_builtin_pattern(builtin)])
+         [pp(b) for b in builtin_commands.keys() if is_global_builtin_pattern(b)])
 
     if l != []:
         print('global: ', end='')
