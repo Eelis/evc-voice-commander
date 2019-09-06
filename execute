@@ -529,28 +529,28 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
     return (longest, bad, acts, mode)
 
 def process(words, mode, handle_builtins=True, include_autoenabled=True):
-    # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
+    # returns (n, bad, acts, newmode) where n is how many words were recognized, and acts is a list of actions
 
     if words == []: return (0, False, [], mode)
     cmd, *_ = words
 
-    n, missing, acts, mode2 = handle_alias(words, mode, include_autoenabled)
+    n, bad, acts, mode2 = handle_alias(words, mode, include_autoenabled)
 
     if handle_builtins:
-        n2, m, a, mo = handle_builtin_command(words, mode, include_autoenabled)
+        n2, b, a, mo = handle_builtin_command(words, mode, include_autoenabled)
         if n2 > n:
             n = n2
-            missing = m
+            bad = b
             acts = a
             mode2 = mo
 
-    if missing:
-        return (n, missing, acts, mode)
+    if bad:
+        return (n, bad, acts, mode)
     if n != 0:
-        m, missing, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
-        return (n + m, missing, acts + acts2, mode3)
+        m, bad, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
+        return (n + m, bad, acts + acts2, mode3)
 
-    return (n, missing, [], mode)
+    return (n, bad, [], mode)
 
 # input preprocessing:
 
@@ -576,8 +576,8 @@ def eval_command(words, line):
     if debug: print()
 
     handle_builtins = (mode != idle_mode)
-    n, missing, acts, newmode = process(words, mode, handle_builtins, True)
-    c = confirm_input(words, n, missing, newmode, line)
+    n, bad, acts, newmode = process(words, mode, handle_builtins, True)
+    c = confirm_input(words, n, bad, newmode, line)
     actnames = [' '.join(w) for _, w in acts]
     if actnames != [] and (len(actnames) >= 2 or actnames[0] != ' '.join(words)):
         print(', '.join(actnames))
@@ -677,8 +677,8 @@ def prompt_width():
 def truncate(s, n):
     return (s[:n-3] + '...' if len(s) > n else s)
 
-def confirm_input(words, n, missing, newmode, original_input):
-    if n == 0:
+def confirm_input(words, n, bad, newmode, original_input):
+    if n == 0 or (n == 1 and bad and words[0].isdigit()):
         clear_line()
         print_prompt()
         cols = shutil.get_terminal_size().columns
@@ -692,12 +692,14 @@ def confirm_input(words, n, missing, newmode, original_input):
     if n != len(words):
         if n != 0: print(' ', end='')
         print(colored(' '.join(words[n:]), 'red'), end='')
-    elif missing != 0:
+    elif bad:
+        # if all words were consumed but evaluation still went bad,
+        # it means additional input was missing
         print(colored(' <???>', 'red'), end='')
     print()
 
     sound('good.wav', n)
-    if n != len(words) or missing != 0:
+    if n != len(words) or bad:
         sound('bad.wav', 1, wait=False)
     return True
 
