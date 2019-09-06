@@ -234,7 +234,7 @@ def cmd_execute(_, cmd):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
-    cmd_print(output)
+    cmd_print('print', output)
 
 def cmd_restart(_):
     os.execl(sys.argv[0], *sys.argv)
@@ -246,15 +246,12 @@ def cmd_exit(_):
 def cmd_nop(_):
     pass
 
-def cmd_sleep(_, n):
-    time.sleep(int(n))
-
 def cmd_times(n, _times, *cmd):
     _, _, acts, _ = process(list(cmd), mode, True, True)
     for i in range(int(n)):
         for f, w in acts: f(*w)
 
-def cmd_define(*cmd):
+def cmd_define(_, *cmd):
     for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
         for pattern in modes[m].keys():
             matched, incomplete, _ = params_matched(pattern.split(), list(cmd), mode)
@@ -268,7 +265,7 @@ def cmd_define(*cmd):
 
 builtin_commands = {
     'stop':
-        lambda: cmd_switch_mode('switch', idle_mode),
+        lambda _: cmd_switch_mode('switch', idle_mode),
     'restart': cmd_restart,
     'shutdown': cmd_exit,
     'options': cmd_options,
@@ -280,7 +277,6 @@ builtin_commands = {
     'run <word>': cmd_run,
     'execute <word>': cmd_execute,
     'text <word>': cmd_text,
-    'sleep <number>': cmd_sleep,
     'print <word>': cmd_print,
     '<number> times <command>': cmd_times,
     'define <command>': cmd_define
@@ -407,11 +403,11 @@ def split_expansion(s):
     if s[0] == '"':
         close = s[1:].find('"') + 1
         # todo: handle close == -1
+        x = s[1:close]
         if close+1 == len(s): return [x]
         # todo: handle s[close+1]!=' '
         afterspace = close+1
         while s[afterspace] == ' ': afterspace += 1
-        x = s[1:close]
         return [x] + split_expansion(s[afterspace:])
     space = s.find(' ')
     if space == -1: return [s]
@@ -470,8 +466,8 @@ def handle_alias(input, current_mode, include_autoenabled):
         for varname, varvalue in vars:
             exp = [tok.replace('$' + varname, varvalue) for tok in exp]
 
-        matched, _, a, m = process(exp, m, True, False)
-        if matched == len(exp):
+        matched, incomplete, a, m = process(exp, m, True, False)
+        if not incomplete:
             acts = a
             newmode = m
         else:
@@ -533,21 +529,22 @@ def process(words, mode, handle_builtins, include_autoenabled):
     cmd, *_ = words
 
     n, missing, acts, mode2 = handle_alias(words, mode, include_autoenabled)
+
+    if handle_builtins:
+        n2, m, a, mo = handle_builtin_command(words, mode, include_autoenabled)
+        if n2 > n:
+            n = n2
+            missing = m
+            acts = a
+            mode2 = mo
+
     if missing:
         return (n, missing, acts, mode)
     if n != 0:
         m, missing, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
         return (n + m, missing, acts + acts2, mode3)
 
-    if handle_builtins:
-        n, missing, acts, mode2 = handle_builtin_command(words, mode, include_autoenabled)
-        if missing:
-            return (n, missing, acts, mode)
-        if n != 0:
-            m, missing, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
-            return (n + m, missing, acts + acts2, mode3)
-
-    return (0, False, [], mode)
+    return (n, missing, [], mode)
 
 # input preprocessing:
 
