@@ -148,9 +148,18 @@ def cmd_options():
     for m in mm:
         indent = len(m) + len("in : ")
         l = []
+        simples = []
         for pat, exp in modes[m].items():
-            if pat != '|'.join(global_modes):
+            if pat == '|'.join(global_modes): continue
+            if exp == 'builtin press $0':
+                if len(pat.split()) == 1:
+                    for alt in pat.split('|'):
+                        simples.append((alt + ', ', len(alt) + 2))
+                else:
+                    simples.append((pat + ', ', len(pat) + 2))
+            else:
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
+        l += simples
         for builtin in builtin_commands.keys():
             cmd, *_ = builtin.split()
             if cmd in builtins_enabled[m] and cmd not in global_builtins and cmd not in builtins_displayed:
