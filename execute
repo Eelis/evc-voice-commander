@@ -132,19 +132,100 @@ def key_by_name(name):
 
 # built-in commands:
 
-def cmd_switch_mode(_, m):
-    global mode
-    mode = m
+def is_global_builtin_pattern(pat):
+    pat = pat.split()
+    while pat != [] and pat[0][0] == '<':
+        pat = pat[1:]
+    return pat != [] and pat[0] in global_builtins
 
+def is_keyname(s):
+    return s in pyautogui.KEYBOARD_KEYS or s in extra_key_names
+
+def is_keyspec(spec):
+    all_keys = pyautogui.KEYBOARD_KEYS + list(extra_key_names.keys())
+    for combo in spec.split(','):
+        mult = combo.find('*')
+        if mult != -1:
+            if not combo[:mult].isdigit(): return False
+            combo = combo[mult+1:]
+        for k in combo.split('+'):
+            if not is_keyname(k): return False
+    return True
+
+builtin_commands = {}
+
+def make_builtin(pattern):
+    def f(g):
+        builtin_commands[pattern] = g
+        return g
+    return f
+
+def action(cmd, mode):
+    _, _, acts, _ = process(list(cmd), mode)
+    def combined():
+        for f, w in acts: f(*w)
+    return combined
+
+@make_builtin('<number> times <command>')
+def cmd_times(n, _, *cmd):
+    a = action(cmd, mode)
+    for i in range(int(n)): a()
+
+@make_builtin('stop')
+def cmd_stop(_):
+    global mode
+    mode = idle_mode
+
+@make_builtin('run <word>')
+def cmd_run(_, cmd):
+    subprocess.Popen(cmd, shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+@make_builtin('execute <word>')
+def cmd_execute(_, cmd):
+    output = subprocess.Popen(cmd, shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
+    cmd_print('print', output)
+
+@make_builtin('restart')
+def cmd_restart(_):
+    os.execl(sys.argv[0], *sys.argv)
+
+@make_builtin('keydown <key>')
 def press_key(_, key_name):
     pyautogui.keyDown(key_by_name(key_name))
 
+@make_builtin('keyup <key>')
 def release_key(_, key_name):
     pyautogui.keyUp(key_by_name(key_name))
 
-def cmd_text(_, s):
-    pyautogui.press([c for c in s])
+@make_builtin('nop')
+def cmd_nop(_):
+    pass
 
+@make_builtin('shutdown')
+def cmd_exit(_):
+    sys.stdout.write("\033[?25h") # restore cursor
+    sys.exit(0)
+
+@make_builtin('define <command>')
+def cmd_define(_, *cmd):
+    for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
+        for pattern in modes[m].keys():
+            matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
+            if matched > 0 and not bad:
+                print_definition(m, pattern)
+                return
+    for pattern, _ in builtin_commands.items():
+        matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
+        if matched > 0 and not bad:
+            print_builtin(pattern)
+
+@make_builtin('options')
 def cmd_options(_):
     mm = [mode]
     if mode != idle_mode:
@@ -189,12 +270,16 @@ def cmd_options(_):
         (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
         print(indented_and_wrapped(l, indent), end='\n\n')
 
-def is_global_builtin_pattern(pat):
-    pat = pat.split()
-    while pat != [] and pat[0][0] == '<':
-        pat = pat[1:]
-    return pat != [] and pat[0] in global_builtins
+@make_builtin('text <word>')
+def cmd_text(_, s):
+    pyautogui.press([c for c in s])
 
+@make_builtin('switch <mode>')
+def cmd_switch_mode(_, m):
+    global mode
+    mode = m
+
+@make_builtin('press <keys>')
 def cmd_press(_, spec):
     for combo in spec.split(','):
         times = 1
@@ -212,81 +297,9 @@ def cmd_press(_, spec):
                 time.sleep(0.05)
                 for k in reversed(keys): release_key('release', k)
 
-def is_keyname(s):
-    return s in pyautogui.KEYBOARD_KEYS or s in extra_key_names
-
-def is_keyspec(spec):
-    all_keys = pyautogui.KEYBOARD_KEYS + list(extra_key_names.keys())
-    for combo in spec.split(','):
-        mult = combo.find('*')
-        if mult != -1:
-            if not combo[:mult].isdigit(): return False
-            combo = combo[mult+1:]
-        for k in combo.split('+'):
-            if not is_keyname(k): return False
-    return True
-
-def cmd_run(_, cmd):
-    subprocess.Popen(cmd, shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
-
+@make_builtin('print <word>')
 def cmd_print(_, s):
     print(colored(s, 'magenta'))
-
-def cmd_execute(_, cmd):
-    output = subprocess.Popen(cmd, shell=True,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
-    cmd_print('print', output)
-
-def cmd_restart(_):
-    os.execl(sys.argv[0], *sys.argv)
-
-def cmd_exit(_):
-    sys.stdout.write("\033[?25h") # restore cursor
-    sys.exit(0)
-
-def cmd_nop(_):
-    pass
-
-def cmd_times(n, _times, *cmd):
-    _, _, acts, _ = process(list(cmd), mode, True, True)
-    for i in range(int(n)):
-        for f, w in acts: f(*w)
-
-def cmd_define(_, *cmd):
-    for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
-        for pattern in modes[m].keys():
-            matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
-            if matched > 0 and not bad:
-                print_definition(m, pattern)
-                return
-    for pattern, _ in builtin_commands.items():
-        matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
-        if matched > 0 and not bad:
-            print_builtin(pattern)
-
-builtin_commands = {
-    'stop':
-        lambda _: cmd_switch_mode('switch', idle_mode),
-    'restart': cmd_restart,
-    'shutdown': cmd_exit,
-    'options': cmd_options,
-    'nop': cmd_nop,
-    'switch <mode>': cmd_switch_mode,
-    'keydown <key>': press_key,
-    'keyup <key>': release_key,
-    'press <keys>': cmd_press,
-    'run <word>': cmd_run,
-    'execute <word>': cmd_execute,
-    'text <word>': cmd_text,
-    'print <word>': cmd_print,
-    '<number> times <command>': cmd_times,
-    'define <command>': cmd_define
-} # note: starting the lambdas on a new line above cleans up the output of 'define <builtincmd>'
 
 # command evaluation:
 
@@ -487,10 +500,12 @@ def print_builtin(pattern):
     lines = inspect.getsource(func).split('\n')
     while lines != [] and lines[-1] == '':
         lines = lines[:-1]
+    if lines != [] and lines[0].startswith('@make_builtin'):
+        lines = lines[1:]
     if len(lines) == 1:
         print(lines[0].strip().rstrip(','))
     else:
-        print('\n' + '\n'.join(map(lambda s: '    ' + s, inspect.getsource(func).split('\n'))))
+        print('\n' + '\n'.join(map(lambda s: '    ' + s, lines)), end = '\n\n')
 
 def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
     patterns = []
@@ -526,7 +541,7 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
 
     return (longest, bad, acts, mode)
 
-def process(words, mode, handle_builtins, include_autoenabled):
+def process(words, mode, handle_builtins=True, include_autoenabled=True):
     # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
 
     if words == []: return (0, False, [], mode)
