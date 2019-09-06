@@ -434,15 +434,16 @@ def longest_matching_pattern(patterns, input, mode):
         print("finding longest pattern matching", input, "among", [p for p, _ in patterns])
 
     for p, r in patterns:
-        params = p.split()
-        matched, b, v = params_matched(params, input, mode)
-        if matched > longest:
-            longest = matched
-            bad = b
-            if not bad:
-                pattern = p
-                result = r
-                vars = v
+        for form in p.split('/'):
+            params = form.split()
+            matched, b, v = params_matched(params, input, mode)
+            if matched > longest:
+                longest = matched
+                bad = b
+                if not bad:
+                    pattern = p
+                    result = r
+                    vars = v
 
     if debug:
         print("best match (" + str(longest) + "):", pattern, " bad:", bad)
