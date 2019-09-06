@@ -723,8 +723,10 @@ def noalsaerr():
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
+@click.argument('mode', nargs=1, default=idle_mode)
 @click.argument('cmd', nargs=-1)
-def evc(debug, volume, cmd):
+def evc(debug, volume, mode, cmd):
+    globals()['mode'] = mode
     globals()['debug'] = debug
     initial_words = list(cmd)
     pygame.init()
