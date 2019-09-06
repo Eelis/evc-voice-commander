@@ -507,6 +507,12 @@ def process(words, mode, handle_builtins, include_autoenabled):
     if words == []: return (0, 0, [], mode)
     cmd, *_ = words
 
+    if len(words) >= 3:
+        if words[0].isdigit() and words[1] == 'times':
+            n = int(words[0])
+            matched, missing, acts, newmode = process(words[2:], mode, True, include_autoenabled)
+            return (matched + 2, missing, acts * n, newmode)
+
     n, missing, acts, mode2 = handle_alias(words, mode, include_autoenabled)
     if missing != 0:
         return (n, missing, acts, mode)
