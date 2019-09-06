@@ -91,10 +91,6 @@ def load_config():
             enums = yaml.safe_load(stream)
 
         for mode, aliases in modes.items():
-            if 'forward-keys' in aliases:
-                for pat in aliases['forward-keys'].split():
-                    aliases[pat] = 'builtin press $0'
-                del aliases['forward-keys']
             if 'short-name' in aliases:
                 short_mode_names[mode] = aliases['short-name']
                 del aliases['short-name']
