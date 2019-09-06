@@ -33,7 +33,6 @@ current_windowtitle = ''
 current_windowprocesses = {}
 
 debug = False
-single_command = False
 initial_words = []
 
 args = sys.argv[1:]
@@ -42,9 +41,7 @@ if args != [] and args[0] == '--debug':
     args = args[1:]
 if len(args) >= 1:
     mode, *args = args
-if args != [] and args[0] == '--command':
-    single_command = True
-    args = args[1:]
+if args != []:
     initial_words = args
 
 extra_key_names = {
@@ -756,7 +753,7 @@ load_config()
 with noalsaerr():
     if initial_words != []:
         eval_command(initial_words, ' '.join(initial_words))
-    if not single_command:
+    else:
         asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
 
 sys.stdout.write("\033[?25h") # restore cursor
