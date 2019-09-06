@@ -33,13 +33,19 @@ current_windowtitle = ''
 current_windowprocesses = {}
 
 debug = False
+single_command = False
+initial_words = []
 
 args = sys.argv[1:]
 if args != [] and args[0] == '--debug':
     debug = True
     args = args[1:]
-if len(args) == 1:
-    mode = args[0]
+if len(args) >= 1:
+    mode, *args = args
+if args != [] and args[0] == '--command':
+    single_command = True
+    args = args[1:]
+    initial_words = args
 
 extra_key_names = {
     'space': ' ',
@@ -563,6 +569,20 @@ def replace_words(words):
                     return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
+def eval_command(words, line):
+    if words == []: return
+    if debug: print()
+
+    handle_builtins = (mode != idle_mode)
+    n, missing, acts, newmode = process(words, mode, handle_builtins, True)
+    c = confirm_input(words, n, missing, newmode, line)
+    actnames = [' '.join(w) for _, w in acts]
+    if actnames != [] and (len(actnames) >= 2 or actnames[0] != ' '.join(words)):
+        print(', '.join(actnames))
+    for f, w in acts: f(*w)
+    if c: clear_line()
+    print_prompt()
+
 async def process_lines(input):
     global mode
     loop = asyncio.get_event_loop()
@@ -594,21 +614,9 @@ async def process_lines(input):
                 words = replace_numbers(replace_words(line.split()))
                 if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
                     words.pop(0)
-
-                if words == []: continue
-
-                if debug: print()
-
-                handle_builtins = (mode != idle_mode)
-                n, missing, acts, newmode = process(words, mode, handle_builtins, True)
-                c = confirm_input(words, n, missing, newmode, line)
-                actnames = [' '.join(w) for _, w in acts]
-                if actnames != [] and (len(actnames) >= 2 or actnames[0] != ' '.join(words)):
-                    print(', '.join(actnames))
-                for f, w in acts: f(*w)
-                if c: clear_line()
-                print_prompt()
-                last_active_modes = get_active_modes(mode)
+                if words != []:
+                    eval_command(words, line)
+                    last_active_modes = get_active_modes(mode)
 
 # output:
 
@@ -728,7 +736,12 @@ pygame.mixer.music.set_volume(0.03)
 
 sys.stdout.write("\033[?25l") # hide cursor:
 
+load_config()
+
 with noalsaerr():
-    asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
+    if initial_words != []:
+        eval_command(initial_words, ' '.join(initial_words))
+    if not single_command:
+        asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
 
 sys.stdout.write("\033[?25h") # restore cursor
