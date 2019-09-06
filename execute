@@ -254,13 +254,13 @@ def cmd_times(n, _times, *cmd):
 def cmd_define(_, *cmd):
     for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
         for pattern in modes[m].keys():
-            matched, incomplete, _ = params_matched(pattern.split(), list(cmd), mode)
-            if matched > 0 and not incomplete:
+            matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
+            if matched > 0 and not bad:
                 print_definition(m, pattern)
                 return
     for pattern, _ in builtin_commands.items():
-        matched, incomplete, _ = params_matched(pattern.split(), list(cmd), mode)
-        if matched > 0 and not incomplete:
+        matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
+        if matched > 0 and not bad:
             print_builtin(pattern)
 
 builtin_commands = {
@@ -308,24 +308,22 @@ def param_matched(param, arg, i):
 
 def params_matched(params, args, mode):
     vars = []
+    params_matched = 0
     args_matched = 0
-    incomplete = False
     for i in range(len(params)):
-        if i == len(args):
-            incomplete = True
-            break
+        if i == len(args): break
         if params[i] == '<command>':
-            matched, inc, _, _ = process(args[args_matched:], mode, True, True)
+            matched, b, _, _ = process(args[args_matched:], mode, True, True)
             args_matched += matched
-            if inc:
-                incomplete = True
-                break
+            if b: break
         else:
             b, v = param_matched(params[i], args[i], i)
             if not b: break
             vars += v
             args_matched += 1
-    return (args_matched, incomplete, vars)
+        params_matched += 1
+    bad = (params_matched != len(params))
+    return (args_matched, bad, vars)
 
 def pstree_branch(pids, names, children):
     r = {}
@@ -422,7 +420,7 @@ def longest_matching_pattern(patterns, input, mode):
 
     longest = 0
     vars = None
-    incomplete = False
+    bad = False
     pattern = None
     result = None
 
@@ -431,19 +429,19 @@ def longest_matching_pattern(patterns, input, mode):
 
     for p, r in patterns:
         params = p.split()
-        matched, inc, v = params_matched(params, input, mode)
+        matched, b, v = params_matched(params, input, mode)
         if matched > longest:
             longest = matched
-            incomplete = inc
-            if not incomplete:
+            bad = b
+            if not bad:
                 pattern = p
                 result = r
                 vars = v
 
     if debug:
-        print("best match (" + str(longest) + "):", pattern, " incomplete:", incomplete)
+        print("best match (" + str(longest) + "):", pattern, " bad:", bad)
 
-    return (longest, vars, incomplete, pattern, result)
+    return (longest, vars, bad, pattern, result)
 
 def handle_alias(input, current_mode, include_autoenabled):
     enabled_modes = [current_mode]
@@ -452,11 +450,11 @@ def handle_alias(input, current_mode, include_autoenabled):
 
     patterns = [(pat, (m, exp)) for m in enabled_modes for pat, exp in modes[m].items()]
 
-    longest, vars, incomplete, pattern, r = longest_matching_pattern(patterns, input, current_mode)
+    longest, vars, bad, pattern, r = longest_matching_pattern(patterns, input, current_mode)
 
     acts = []
     newmode = current_mode
-    if longest != 0 and not incomplete:
+    if longest != 0 and not bad:
         m, expansion = r
 
         exp = split_expansion(expansion)
@@ -466,8 +464,8 @@ def handle_alias(input, current_mode, include_autoenabled):
         for varname, varvalue in vars:
             exp = [tok.replace('$' + varname, varvalue) for tok in exp]
 
-        matched, incomplete, a, m = process(exp, m, True, False)
-        if not incomplete:
+        matched, bad, a, m = process(exp, m, True, False)
+        if not bad:
             acts = a
             newmode = m
         else:
@@ -475,7 +473,7 @@ def handle_alias(input, current_mode, include_autoenabled):
                   color_mode(m) + ' ' + color_commands(pattern) + ':',
                   color_commands(expansion))
 
-    return (longest, incomplete, acts, newmode)
+    return (longest, bad, acts, newmode)
 
 def print_builtin(pattern):
     func = builtin_commands[pattern]
@@ -503,9 +501,9 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
         if found: patterns.append((pat, f))
 
     acts = []
-    longest, vars, incomplete, pattern, f = longest_matching_pattern(patterns, input, mode)
+    longest, vars, bad, pattern, f = longest_matching_pattern(patterns, input, mode)
     if longest != 0:
-        if not incomplete:
+        if not bad:
             acts = [(f, input[:longest])]
             if pattern == 'switch <mode>': mode = input[1]
                 # this applies the mode switch /during/ command evaluation,
@@ -516,11 +514,11 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
     elif input != []:
         cmd, *args = input
         if cmd == 'builtin':
-            matched, incomplete, acts, newmode = handle_builtin_command(args, mode, False, False)
+            matched, bad, acts, newmode = handle_builtin_command(args, mode, False, False)
             matched += 1
-            return (matched, incomplete, acts, newmode)
+            return (matched, bad, acts, newmode)
 
-    return (longest, incomplete, acts, mode)
+    return (longest, bad, acts, mode)
 
 def process(words, mode, handle_builtins, include_autoenabled):
     # returns (n, missing, acts, newmode) where n is how many words were recognized, and acts is a list of actions
