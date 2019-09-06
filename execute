@@ -563,7 +563,7 @@ def eval_command(words, line):
     n, bad, acts, newmode = process(words, mode, handle_builtins, True)
     c = confirm_input(words, n, bad, newmode, line)
     actnames = [' '.join(w) for _, w in acts]
-    if actnames != [] and (len(actnames) >= 2 or actnames[0] != ' '.join(words)):
+    if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
     for f, w in acts: f(*w)
     if c: clear_line()
