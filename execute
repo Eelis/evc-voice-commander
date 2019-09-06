@@ -462,13 +462,13 @@ def handle_alias(input, current_mode, include_autoenabled):
     newmode = current_mode
     if longest != 0 and not bad:
         m, expansion = r
-
-        exp = split_expansion(expansion)
-        vars += [(str(i), w) for i, w in enumerate(input[:longest])]
-        vars.append(('windowpid', current_windowpid))
-        vars.append(('windowtitle', current_windowtitle))
+        vars += ([(str(i), w) for i, w in enumerate(input[:longest])] +
+                 [('windowpid', current_windowpid),
+                  ('windowtitle', current_windowtitle),
+                  ('*', ' '.join(input[:longest]))])
         for varname, varvalue in vars:
-            exp = [tok.replace('$' + varname, varvalue) for tok in exp]
+            expansion = expansion.replace('$' + varname, varvalue)
+        exp = split_expansion(expansion)
 
         matched, bad, a, m = process(exp, m, True, False)
         if not bad:
