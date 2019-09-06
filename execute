@@ -54,14 +54,13 @@ auto_enable_for_applications = {}
 auto_enable_for_leaf_applications = {}
 auto_enable_for_suffixes = {}
 auto_enable_for_prefixes = {}
-builtins_enabled = {}
 global_modes = []
 
 global_builtins = ['stop', 'options', 'define', 'builtin', 'times']
     # this order is also used for display to humans
 
 def load_config():
-    global word_replacements, numbers, modes, enums, short_mode_names, builtins_enabled, global_modes
+    global word_replacements, numbers, modes, enums, short_mode_names, global_modes
     global auto_enable_for_applications
     global auto_enable_for_leaf_applications
     global auto_enable_for_suffixes
@@ -71,7 +70,6 @@ def load_config():
     auto_enable_for_leaf_applications = {}
     auto_enable_for_suffixes = {}
     auto_enable_for_prefixes = {}
-    builtins_enabled = {}
     global_modes = []
     try:
         with open(configdir + '/replacements.yaml', 'r') as stream:
@@ -99,10 +97,6 @@ def load_config():
             if 'auto-enable-for-suffixes' in aliases:
                 auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
                 del aliases['auto-enable-for-suffixes']
-            builtins_enabled[mode] = global_builtins.copy()
-            if 'enable-builtins' in aliases:
-                builtins_enabled[mode] += aliases['enable-builtins'].split()
-                del aliases['enable-builtins']
             if 'global-mode' in aliases:
                 if aliases['global-mode']:
                     global_modes.append(mode)
@@ -225,7 +219,10 @@ def cmd_options(_):
         simples = []
         for pat, exp in modes[m].items():
             if pat == '|'.join(global_modes): continue
-            if exp == 'builtin press $0':
+            if exp == 'builtin $*':
+                for form in pat.split('/'):
+                    simples.append((form + ', ', len(form) + 2))
+            elif exp == 'builtin press $0':
                 if len(pat.split()) == 1:
                     for alt in pat.split('|'):
                         simples.append((alt + ', ', len(alt) + 2))
@@ -234,12 +231,6 @@ def cmd_options(_):
             else:
                 l.append((color_commands(pat) + ', ', len(pat) + 2))
         l += simples
-        for builtin in builtin_commands.keys():
-            if is_global_builtin_pattern(builtin): continue
-            cmd, *_ = builtin.split()
-            if cmd in builtins_enabled[m] and cmd not in builtins_displayed:
-                builtins_displayed.append(cmd)
-                l.append((builtin + ', ', len(builtin) + 2))
         for pat, exp in modes[m].items():
             if pat in modes and pat != m and exp == 'builtin switch ' + pat:
                 l.append((color_mode(pat) + ', ', len(pat) + 2))
@@ -495,19 +486,11 @@ def print_builtin(pattern):
     else:
         print('\n' + '\n'.join(map(lambda s: '    ' + s, lines)), end = '\n\n')
 
-def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
+def handle_builtin_command(input, mode, only_global=True):
     patterns = []
     for pat, f in builtin_commands.items():
-        cmd, *_ = pat.split()
-        found = False
-        if not only_enabled or is_global_builtin_pattern(pat):
-            found = True
-        else: # find a mode that enables this builtin
-            for m in modes:
-                if m == mode or (include_autoenabled and mode_is_auto_enabled(m)):
-                    if m in builtins_enabled and cmd in builtins_enabled[m]:
-                        found = True
-        if found: patterns.append((pat, f))
+        if not only_global or is_global_builtin_pattern(pat):
+            patterns.append((pat, f))
 
     acts = []
     longest, vars, bad, pattern, f = longest_matching_pattern(patterns, input, mode)
@@ -523,7 +506,7 @@ def handle_builtin_command(input, mode, include_autoenabled, only_enabled=True):
     elif input != []:
         cmd, *args = input
         if cmd == 'builtin':
-            matched, bad, acts, newmode = handle_builtin_command(args, mode, False, False)
+            matched, bad, acts, newmode = handle_builtin_command(args, mode, False)
             matched += 1
             return (matched, bad, acts, newmode)
 
@@ -538,7 +521,7 @@ def process(words, mode, handle_builtins=True, include_autoenabled=True):
     n, bad, acts, mode2 = handle_alias(words, mode, include_autoenabled)
 
     if handle_builtins:
-        n2, b, a, mo = handle_builtin_command(words, mode, include_autoenabled)
+        n2, b, a, mo = handle_builtin_command(words, mode)
         if n2 > n:
             n = n2
             bad = b
