@@ -16,6 +16,7 @@ import inspect
 from termcolor import colored
 from ctypes import *
 from contextlib import contextmanager
+import click
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame # apt-get install python-pygame
@@ -31,18 +32,7 @@ ignore = ["i", "of", "the", "if"]
 current_windowpid = ''
 current_windowtitle = ''
 current_windowprocesses = {}
-
 debug = False
-initial_words = []
-
-args = sys.argv[1:]
-if args != [] and args[0] == '--debug':
-    debug = True
-    args = args[1:]
-if len(args) >= 1:
-    mode, *args = args
-if args != []:
-    initial_words = args
 
 extra_key_names = {
     'space': ' ',
@@ -742,18 +732,28 @@ def noalsaerr():
     yield
     asound.snd_lib_error_set_handler(None)
 
-pygame.init()
-pygame.mixer.music.set_volume(0.03)
-    # very low so our beeps are (a) non-obnoxious, and (b) won't interfere with speech recognition
+@click.command()
+@click.option('--debug', default=False,type=bool)
+@click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
+                                                   # (a) non-obnoxious, and
+                                                   # (b) won't interfere with speech recognition.
+@click.argument('cmd', nargs=-1)
+def evc(debug, volume, cmd):
+    globals()['debug'] = debug
+    initial_words = list(cmd)
+    pygame.init()
+    pygame.mixer.music.set_volume(volume)
 
-sys.stdout.write("\033[?25l") # hide cursor:
+    sys.stdout.write("\033[?25l") # hide cursor:
 
-load_config()
+    load_config()
 
-with noalsaerr():
-    if initial_words != []:
-        eval_command(initial_words, ' '.join(initial_words))
-    else:
-        asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
+    with noalsaerr():
+        if initial_words != []:
+            eval_command(initial_words, ' '.join(initial_words))
+        else:
+            asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
 
-sys.stdout.write("\033[?25h") # restore cursor
+    sys.stdout.write("\033[?25h") # restore cursor
+
+if __name__ == '__main__': evc()
