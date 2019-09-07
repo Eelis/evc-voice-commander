@@ -684,6 +684,7 @@ def clear_line():
 
 def print_prompt():
     modes = get_active_modes(mode)
+    if modes == [idle_mode]: modes = []
     print(','.join(map(
         lambda s: color_mode(short_mode_name(s)),
         modes)) + '> ', end='')
@@ -691,6 +692,7 @@ def print_prompt():
 
 def prompt_width():
     modes = get_active_modes(mode)
+    if modes == [idle_mode]: modes = []
     return len(','.join(map(short_mode_name, modes)) + '> ')
 
 def truncate(s, n):
