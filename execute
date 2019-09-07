@@ -103,7 +103,7 @@ def load_config():
                 del aliases['global-mode']
 
         for mode, aliases in modes.items():
-            aliases['|'.join(global_modes)] = 'builtin switch $0'
+            aliases['|'.join(global_modes)] = 'builtin mode $0'
 
     except Exception as e:
         print("\nerror loading config:", e)
@@ -267,7 +267,7 @@ def cmd_options(_):
                 l.append(command_pattern(pat))
         l += simples
         for pat, exp in modes[m].items():
-            if pat in modes and pat != m and exp == 'builtin switch ' + pat:
+            if pat in modes and pat != m and exp == 'builtin mode ' + pat:
                 l.append((color_mode(pat) + ', ', len(pat) + 2))
         if l != []:
             print('in', color_mode(m) + ': ', end='')
@@ -291,10 +291,10 @@ def cmd_options(_):
 def cmd_text(_, s):
     pyautogui.press([c for c in s])
 
-@make_builtin('switch <mode>')
-def cmd_switch_mode(_, m):
+@make_builtin('mode <mode>')
+def cmd_mode(_, new_mode):
     global mode
-    mode = m
+    mode = new_mode
 
 @make_builtin('press <keys>')
 def cmd_press(_, spec):
@@ -550,11 +550,11 @@ def handle_builtin_command(input, mode, only_global=True):
     if r.longest != 0:
         if r.missing == []:
             r.actions = [(f, input[:r.longest])]
-            if pattern == 'switch <mode>': r.new_mode = input[1]
+            if pattern == 'mode <mode>': r.new_mode = input[1]
                 # this applies the mode switch /during/ command evaluation,
                 # which is beyond the capabilities of regular built-ins,
                 # since those only produce actions to be executed later.
-                # hence this special case for the 'switch' command.
+                # hence this special case for the 'mode' command.
 
     elif input != []:
         cmd, *args = input
