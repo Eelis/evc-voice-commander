@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import re
 import itertools
 import time
 import fileinput
@@ -195,42 +196,37 @@ def cmd_exit(_):
 
 @make_builtin('define <command>')
 def cmd_define(_, *cmd):
+
     for m in [mode] + [m for m in modes if m != mode and mode_is_auto_enabled(m)]:
         for pattern in modes[m].keys():
-            matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
-            if matched > 0 and not bad:
-                print_definition(m, pattern)
+            matched, missing, _ = params_matched(pattern.split(), list(cmd), mode)
+            if matched > 0 and missing == []:
+                print('\nin ', end='')
+                print(alias_definition_str(m, pattern, len('in ')))
+                print()
                 return
     for pattern, _ in builtin_commands.items():
-        matched, bad, _ = params_matched(pattern.split(), list(cmd), mode)
-        if matched > 0 and not bad:
+        matched, missing, _ = params_matched(pattern.split(), list(cmd), mode)
+        if matched > 0 and missing == []:
             print_builtin(pattern)
 
-def italic_types_ext(pattern):
-    with_markup = '/'.join(
+ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
+def strip_markup(s):
+    return ansi_escape.sub('', s)
+
+turn_on_italic = "\x1B[3m"
+turn_off_italic = "\x1B[23m"
+
+def italic_types(pattern):
+    return '/'.join(
             [' '.join(
                 ['|'.join(
-                    [ ("\x1B[3m"+alt[1:-1]+"\x1B[23m" if alt.startswith('<') else alt)
+                    [ (turn_on_italic + alt[1:-1] + turn_off_italic if alt.startswith('<') else alt)
                         for alt in param.split('|')
                     ])
                     for param in form.split(' ')
                 ])
                 for form in pattern.split('/')])
-    wo_markup = '/'.join(
-            [' '.join(
-                ['|'.join(
-                    [ (alt[1:-1] if alt.startswith('<') else alt)
-                        for alt in param.split('|')
-                    ])
-                    for param in form.split(' ')
-                ])
-                for form in pattern.split('/')])
-
-    return (with_markup, wo_markup)
-
-def italic_types(pat):
-    w, wo = italic_types_ext(pat)
-    return w
 
 @make_builtin('options')
 def cmd_options(_):
@@ -241,12 +237,10 @@ def cmd_options(_):
     builtins_displayed = []
 
     def command_pattern(pat):
-        w, wo = italic_types_ext(pat)
-        return (color_commands(w) + ', ', len(wo) + 2)
+        return color_commands(italic_types(pat)) + ', '
 
     def simple_pattern(pat):
-        w, wo = italic_types_ext(pat)
-        return (w + ', ', len(wo) + 2)
+        return italic_types(pat) + ', '
 
     for m in mm:
         indent = len(m) + len("in : ")
@@ -268,23 +262,19 @@ def cmd_options(_):
         l += simples
         for pat, exp in modes[m].items():
             if pat in modes and pat != m and exp == 'builtin mode ' + pat:
-                l.append((color_mode(pat) + ', ', len(pat) + 2))
+                l.append(color_mode(pat) + ', ')
         if l != []:
             print('in', color_mode(m) + ': ', end='')
-            (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
+            s = l[-1]; l[-1] = s[:-2] # remove last comma
             print(indented_and_wrapped(l, indent), end='\n\n')
 
-    def pp(b):
-        w, wo = italic_types_ext(b)
-        return (w + ', ', len(wo) + 2)
-
-    l = ([(color_mode(m) + ', ', len(m) + 2) for m in global_modes if m not in mm] +
-         [pp(b) for b in builtin_commands.keys() if is_global_builtin_pattern(b)])
+    l = ([color_mode(m) + ', ' for m in global_modes if m not in mm] +
+         [italic_types(b) + ', ' for b in builtin_commands.keys() if is_global_builtin_pattern(b)])
 
     if l != []:
         print('global: ', end='')
         indent = len('global: ')
-        (s, w) = l[-1]; l[-1] = (s[:-2], w - 2) # remove last comma
+        s = l[-1]; l[-1] = s[:-2] # remove last comma
         print(indented_and_wrapped(l, indent), end='\n\n')
 
 @make_builtin('text <word>')
@@ -346,21 +336,26 @@ def params_matched(params, args, mode):
     vars = []
     params_matched = 0
     args_matched = 0
+    missing = []
     for i in range(len(params)):
         if i == len(args): break
         if params[i] == '<command>':
             pr = process(args[args_matched:], mode, True, True)
             args_matched += pr.longest
-            if pr.missing != []: break
+            if pr.longest == 0:
+                missing = [params[i]]
+                break
+            if pr.missing != []:
+                missing = pr.missing
+                break
         else:
             b, v = param_matched(params[i], args[i], i)
             if not b: break
             vars += v
             args_matched += 1
         params_matched += 1
-    missing = []
-    if params_matched < len(params):
-        missing = [params[params_matched]] # NOOO
+    if params_matched < len(params) and missing == []:
+        missing = [params[params_matched]]
     return (args_matched, missing, vars)
 
 def pstree_branch(pids, names, children):
@@ -490,6 +485,10 @@ class ParseResult():
         self.missing = []
         self.actions = []
         self.new_mode = None
+        self.error = None
+
+def quote_if_necessary(s):
+    return (s if ' ' not in s else '"' + s + '"')
 
 def handle_alias(input, current_mode, include_autoenabled):
     enabled_modes = [current_mode]
@@ -506,6 +505,7 @@ def handle_alias(input, current_mode, include_autoenabled):
 
     if r.longest != 0 and r.missing == []:
         m, expansion = x
+        original_expansion = expansion
         vars += ([(str(i), w) for i, w in enumerate(input[:r.longest])] +
                  [('windowpid', current_windowpid),
                   ('windowtitle', current_windowtitle),
@@ -519,9 +519,16 @@ def handle_alias(input, current_mode, include_autoenabled):
             r.actions = sub.actions
             r.new_mode = sub.new_mode
         else:
-            print(colored('\nerror: bad alias:', 'red'),
-                  color_mode(m) + ' ' + color_commands(pattern) + ':',
-                  color_commands(expansion))
+            qexp = list(map(quote_if_necessary, exp))
+            s = indented_and_wrapped(
+                [colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
+                [colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
+            r.error = colored('\nerror:', 'red') + '\n' + \
+                '  input ' + colored(' '.join(input), 'green') + ' matched alias:\n' + \
+                '    ' + alias_definition_str(m, pattern, 4) + '\n' + \
+                '  invalid expansion:\n    ' + s + '\n' + \
+                '  ' + ('missing ' if sub.longest == len(exp) else 'expected ') + \
+                ' or '.join(map(italic_types, sub.missing)) + '\n'
 
     return r
 
@@ -571,13 +578,14 @@ def process(words, mode, handle_builtins=True, include_autoenabled=True):
 
     r = handle_alias(words, mode, include_autoenabled)
 
-    if handle_builtins:
+    if handle_builtins and r.error is None:
         r2 = handle_builtin_command(words, mode)
         if r2.longest > r.longest:
             r.longest = r2.longest
             r.missing = r2.missing
             r.actions = r2.actions
             r.new_mode = r2.new_mode
+            r.error = r2.error
 
     if r.missing != []:
         return r
@@ -590,12 +598,13 @@ def process(words, mode, handle_builtins=True, include_autoenabled=True):
         if r.new_mode is not None:
             mode = r.new_mode
 
-        if r.longest != len(words):
+        if r.longest != len(words) and r.error is None:
             r2 = process(words[r.longest:], mode, True, include_autoenabled)
             r.longest += r2.longest
             r.missing = (r2.missing if r2.longest != 0 else ['<command>'])
             r.actions += r2.actions
             r.new_mode = r2.new_mode
+            r.error = r2.error
 
     return r
 
@@ -624,7 +633,8 @@ def eval_command(words, line):
 
     handle_builtins = (mode != idle_mode)
     pr = process(words, mode, handle_builtins, True)
-    c = confirm_input(words, pr.longest, pr.missing, pr.new_mode, line)
+
+    c = confirm_input(words, pr, line)
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
@@ -673,8 +683,10 @@ def indented_and_wrapped(l, n):
     cols = shutil.get_terminal_size().columns
     cur = n
     r = ''
+    l = [x + ' ' for x in ' '.join(l).split()]
     while l != []:
-        (s, w) = l[0]
+        s = l[0]
+        w = len(strip_markup(s))
         if (cur + w <= cols) or r == '' or r.endswith('\n' + ' ' * n):
             cur += w
             r += s
@@ -684,14 +696,14 @@ def indented_and_wrapped(l, n):
             cur = n
     return r
 
-def print_definition(mode, pattern):
+def alias_definition_str(mode, pattern, start_column=0):
     expansion = modes[mode][pattern]
-    print('\nin', color_mode(mode) + ',',
-        color_commands(pattern), '= ', end='')
-    indent = len(mode) + len(pattern) + len("in ,  = ")
-    l = [(color_commands(e) + ' ', len(e) + 1) for e in expansion.split()] # todo: handle '' args
-    s, w = l[-1]; l[-1] = (s[:-1], w - 1) # remove last space
-    print(indented_and_wrapped(l, indent), end='\n\n')
+    pat = italic_types(pattern)
+    r = color_mode(mode) + ' ' + color_commands(pat) + ' = '
+    indent = start_column + len(mode) + len(strip_markup(pat)) + len("  = ")
+    l = [color_commands(e) + ' ' for e in expansion.split()] # todo: handle '' args
+    s = l[-1]; l[-1] = s[:-1] # remove last space
+    return r + indented_and_wrapped(l, indent)
 
 def sound(n, count=1, wait=True):
     if count == 0 or not sound_effects: return
@@ -726,8 +738,9 @@ def prompt_width():
 def truncate(s, n):
     return (s[:n-3] + '...' if len(s) > n else s)
 
-def confirm_input(words, n, missing, newmode, original_input):
-    if n == 0 or (n == 1 and missing != [] and words[0].isdigit()):
+def confirm_input(words, pr, original_input):
+    n = pr.longest
+    if n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit()):
         clear_line()
         print_prompt()
         cols = shutil.get_terminal_size().columns
@@ -738,22 +751,28 @@ def confirm_input(words, n, missing, newmode, original_input):
     clear_line()
     print_prompt()
     print(colored(' '.join(words[:n]), 'green'), end='')
+    if pr.error is not None:
+        print(pr.error)
+        sound('good.wav', n)
+        sound('bad.wav', 1, wait=False)
+        return False
+
     if n != len(words):
         if n != 0: print(' ', end='')
         print(colored(' '.join(words[n:]), 'red'), end='')
-    elif missing != []:
+    elif pr.missing != []:
         # if all words were consumed but evaluation still went bad,
         # it means additional input was missing
-        print(colored(' ...?', 'red'), end='')
+        print(colored(' ???', 'red'), end='')
     print()
 
-    if missing != []:
-        what = ' or '.join(map(italic_types, missing))
+    if pr.missing != []:
+        what = ' or '.join(map(italic_types, pr.missing))
         problem = ('missing' if n == len(words) else 'expected')
         print(colored('error: ' + problem + ' ' + what, 'red'))
 
     sound('good.wav', n)
-    if n != len(words) or missing != []:
+    if n != len(words) or pr.missing != []:
         sound('bad.wav', 1, wait=False)
     return True
 
@@ -805,6 +824,8 @@ def evc(debug, volume, mode, cmd):
     sys.stdout.write("\033[?25l") # hide cursor:
 
     load_config()
+
+    print()
 
     with noalsaerr():
         if initial_words != []:
