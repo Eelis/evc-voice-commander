@@ -464,7 +464,7 @@ def occurs_as_leaf_in_branch(x, processes):
     return False
 
 def mode_is_auto_enabled(m):
-    aliases = modes[m]
+    if m == idle_mode: return True
     if m in auto_enable_for_applications:
         for app in auto_enable_for_applications[m]:
             if occurs_in_branch(app, current_windowprocesses):
@@ -803,18 +803,14 @@ def clear_line():
     print('\r' + ' ' * cols + '\r', end='')
     sys.stdout.flush()
 
-def print_prompt():
+def prompt_string():
     modes = get_active_modes(mode)
-    if modes == [idle_mode]: modes = []
-    print(','.join(map(
-        lambda s: color_mode(short_mode_name(s)),
-        modes)) + '> ', end='')
-    sys.stdout.flush()
+    if idle_mode in modes: modes.remove(idle_mode)
+    return ','.join(map(lambda s: color_mode(short_mode_name(s)), modes)) + '> '
 
-def prompt_width():
-    modes = get_active_modes(mode)
-    if modes == [idle_mode]: modes = []
-    return len(','.join(map(short_mode_name, modes)) + '> ')
+def print_prompt():
+    print(prompt_string(), end='')
+    sys.stdout.flush()
 
 def truncate(s, n):
     return (s[:n-3] + '...' if len(s) > n else s)
@@ -823,10 +819,10 @@ def confirm_input(words, pr, original_input):
     n = pr.longest
     if n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit()):
         clear_line()
-        print_prompt()
+        prp = prompt_string()
         cols = shutil.get_terminal_size().columns
-        print(colored(truncate(original_input, cols - prompt_width()), 'yellow'), end='')
-        print('\r',end='')
+        print(prp, end='')
+        print(colored(truncate(original_input, cols - len(strip_markup(prp))), 'yellow'), end='\r')
         sys.stdout.flush()
         return False
     clear_line()
