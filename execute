@@ -70,7 +70,6 @@ def load_config():
     auto_enable_for_leaf_applications = {}
     auto_enable_for_suffixes = {}
     auto_enable_for_prefixes = {}
-    enums = {}
     try:
         with open(configdir + '/replacements.yaml', 'r') as stream:
             word_replacements = yaml.safe_load(stream)
@@ -79,29 +78,41 @@ def load_config():
         with open(configdir + '/modes.yaml', 'r') as stream:
             modes = yaml.safe_load(stream)
 
+        # handle enums:
+        enums = {}
         for key, v in modes.items():
             if key.startswith('<'):
                 n = key[1:-1]
                 if type(v) is list: v = '/'.join(v)
                 enums[n] = v
-            else:
-                mode = key
-                aliases = v
-                if 'short-name' in aliases:
-                    short_mode_names[mode] = aliases['short-name']
-                    del aliases['short-name']
-                if 'auto-enable-for-applications' in aliases:
-                    auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
-                    del aliases['auto-enable-for-applications']
-                if 'auto-enable-for-leaf-applications' in aliases:
-                    auto_enable_for_leaf_applications[mode] = aliases['auto-enable-for-leaf-applications'].split()
-                    del aliases['auto-enable-for-leaf-applications']
-                if 'auto-enable-for-prefixes' in aliases:
-                    auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
-                    del aliases['auto-enable-for-prefixes']
-                if 'auto-enable-for-suffixes' in aliases:
-                    auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
-                    del aliases['auto-enable-for-suffixes']
+        for e in enums:
+            del modes['<' + e + '>']
+
+        # handle shortnames:
+        for mode, aliases in modes.items():
+            if mode.endswith(')'):
+                i = mode.find('(')
+                sn = mode[i+1:-1]
+                short_mode_names[mode[:i]] = sn
+        def remove_shortname(s):
+            i = s.find('(')
+            return (s if i == -1 else s[:i])
+        modes = dict([(remove_shortname(m), a) for m, a in modes.items()])
+
+        # handle auto-enabling:
+        for mode, aliases in modes.items():
+            if 'auto-enable-for-applications' in aliases:
+                auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
+                del aliases['auto-enable-for-applications']
+            if 'auto-enable-for-leaf-applications' in aliases:
+                auto_enable_for_leaf_applications[mode] = aliases['auto-enable-for-leaf-applications'].split()
+                del aliases['auto-enable-for-leaf-applications']
+            if 'auto-enable-for-prefixes' in aliases:
+                auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
+                del aliases['auto-enable-for-prefixes']
+            if 'auto-enable-for-suffixes' in aliases:
+                auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
+                del aliases['auto-enable-for-suffixes']
 
     except Exception as e:
         print("\nerror loading config:", e)
