@@ -218,8 +218,9 @@ def num_times_num(x, _p, y):
     return int(x) * int(y)
 
 @make_functional_builtin('enumindex <word> <word>')
-def cmd_enumindex(_, x, y):
-    return 3 # todo
+def cmd_enumindex(_, e, v):
+    l = enums[e].split('/')
+    return l.index(v) if v in l else -1
 
 # times and overloading
 
