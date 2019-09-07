@@ -319,26 +319,33 @@ builtin_types = {
         lambda m: m in modes.keys()
 }
 
-def param_matched(param, arg, i):
+def param_matched(param, args, i, mode):
+    arg = args[0]
     for alt in param.split('|'):
-        if alt == arg: return (True, [])
+        if alt == arg: return (1, [], [])
         for type, pred in builtin_types.items():
             if alt == '<' + type + '>' and pred(arg):
-                return (True, [])
+                return (1, [], [])
         for e in enums:
             if alt == '<' + e + '>':
-                enumerators = enums[e].split()
-                if arg in enumerators:
-                    return (True, [('enumindex' + str(i), str(enumerators.index(arg)))])
-    return (False, [])
+                alternatives = enums[e].split('/')
+                for a in alternatives:
+                    params = a.split()
+                    if [arg] == params:
+                        return (1, [('enumindex' + str(i), str(alternatives.index(arg)))], [])
+                    matched, _v, mis, _pat, _r = longest_matching_pattern([(a, None)], args, mode)
+                    if matched != 0:
+                        return (matched, [], mis)
+    return (0, [], [param])
 
 def params_matched(params, args, mode):
     vars = []
-    params_matched = 0
+    i = 0
     args_matched = 0
     missing = []
-    for i in range(len(params)):
-        if i == len(args): break
+    while i < len(params):
+        if args_matched == len(args):
+            break
         if params[i] == '<command>':
             pr = process(args[args_matched:], mode, True, True)
             args_matched += pr.longest
@@ -349,13 +356,14 @@ def params_matched(params, args, mode):
                 missing = pr.missing
                 break
         else:
-            b, v = param_matched(params[i], args[i], i)
-            if not b: break
-            vars += v
-            args_matched += 1
-        params_matched += 1
-    if params_matched < len(params) and missing == []:
-        missing = [params[params_matched]]
+            am, v, missing = param_matched(params[i], args[i:], i, mode)
+            if am == 0: break
+            vars += [(str(i), ' '.join(args[args_matched : args_matched + am]))] + v
+            args_matched += am
+        i += 1
+
+    if i < len(params) and missing == []:
+        missing = [params[i]]
     return (args_matched, missing, vars)
 
 def pstree_branch(pids, names, children):
@@ -506,10 +514,9 @@ def handle_alias(input, current_mode, include_autoenabled):
     if r.longest != 0 and r.missing == []:
         m, expansion = x
         original_expansion = expansion
-        vars += ([(str(i), w) for i, w in enumerate(input[:r.longest])] +
-                 [('windowpid', current_windowpid),
+        vars += [('windowpid', current_windowpid),
                   ('windowtitle', current_windowtitle),
-                  ('*', ' '.join(input[:r.longest]))])
+                  ('*', ' '.join(input[:r.longest]))]
         for varname, varvalue in vars:
             expansion = expansion.replace('$' + varname, varvalue)
         exp = split_expansion(expansion)
