@@ -744,12 +744,13 @@ def confirm_input(words, n, missing, newmode, original_input):
     elif missing != []:
         # if all words were consumed but evaluation still went bad,
         # it means additional input was missing
-        print(colored(' <???>', 'red'), end='')
+        print(colored(' ...?', 'red'), end='')
     print()
 
     if missing != []:
-        print(colored("error: expected " +
-            ' or '.join(map(italic_types, missing)), 'red'))
+        what = ' or '.join(map(italic_types, missing))
+        problem = ('missing' if n == len(words) else 'expected')
+        print(colored('error: ' + problem + ' ' + what, 'red'))
 
     sound('good.wav', n)
     if n != len(words) or missing != []:
