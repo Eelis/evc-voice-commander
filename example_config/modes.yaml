@@ -1,29 +1,29 @@
 stopped:
     <screen>: focus $0
 
+system:
+    restart/shutdown/print <word>: builtin $*
+
 computer:
     global-mode: True
     short-name: comp
-    enable-builtins: switch print
 
-    sleep <number>: builtin execute "sleep $1"
-
-    <mode>: switch $0
-    new browser: builtin run firefox  switch web
-    new terminal: builtin run urxvt  switch terminal
-    calendar: builtin run mycalendar  focus
+    mode <mode>/print <word>/press <keys>: builtin $*
+    <mode>: mode $0
     <screen>: focus $0  computer
+    sleep <number>: builtin execute "$*"
+    new browser: builtin run firefox  web
+    new terminal: builtin run urxvt  mode terminal
     door: builtin run cctv
-    date: builtin execute $0
-
-system:
-    enable-builtins: restart shutdown print
+    calendar: builtin run "urxvt -e zsh -c 'cal; sleep 1000'"  focus
+    live jobs: builtin run "urxvt -e zsh -c top"  focus
+    job tree: builtin run "urxvt -e zsh -c 'ps fax|less'"  focus
 
 focus:
     global-mode: True
-    enable-builtins: press
 
-    <mode>: builtin switch $0
+    press <keys>: builtin $*
+    <mode>: builtin mode $0
     change <target>: mark  $1  attach # 'move' would be better but is poorly recognized by kaldi
     mark: press wmkey+d
     attach: press wmkey+a
@@ -33,11 +33,13 @@ focus:
     <direction>: press wmkey+$0
     next: press wmkey+tab
     previous: press wmkey+shift+tab
-    forward: press wmkey+pagedown
-    back: press wmkey+pageup
-    new workspace: press wmkey+w
+    next work space: press wmkey+pagedown
+    previous work space: press wmkey+pageup
+    new work space: press wmkey+w
     split <direction>: press wmkey+s,$1
     join: press wmkey+v
+    go 2 frame <number>: press wmkey+j,$3
+    change 2 frame <number>: mark go 2 frame $3 attach
 
 # specific applications:
 
@@ -50,22 +52,29 @@ mail:
     <number> <direction>: builtin press $0*$1
 
 web-navigate:
-    <number>: builtin text $0  builtin switch web
+    <number>: builtin text $0  builtin mode web
     go: builtin press enter
+
+less:
+    auto-enable-for-applications: less
+
+    press <keys>: builtin $*
+    finish: press q
+    find: press slash
 
 web:
     auto-enable-for-applications: firefox-bin
-    enable-builtins: press text
 
+    press <keys>/text <word>: builtin $*
     home|escape|delete|<direction>|space: builtin press $0
     erase: press shift+home,delete
     small: press ctrl+0
     bigger: press ctrl+0,6*ctrl+shift+=
-    finish: press alt+f,c
+    finish: press ctrl+w
     find <word>: press ctrl+f  text $1
     back: press backspace
     location: press f6
-    go: press escape,f  builtin switch web-navigate
+    go: press escape,f  builtin mode web-navigate
     refresh: press f5
     fresh: press f5
     forward: todo
@@ -81,27 +90,27 @@ web:
 
 edit-find:
     slash|backspace: builtin press $0
-    go: builtin press enter  builtin switch edit
-    escape: builtin press escape  builtin switch edit
+    go: builtin press enter  builtin mode edit
+    escape: builtin press escape  builtin mode edit
     cancel: escape
     edit: escape
     delete word: builtin press ctrl+w
 
 edit-insert:
-    enable-builtins: text
     slash|space|semicolon|backspace|period|dollar|percent: builtin press $0
-    escape: builtin press escape  builtin switch edit
+    escape: builtin press escape  builtin mode edit
         # text is not in edit itself because in view mode, entering a textual word makes no sense
+    text <word>: builtin $*
 
 edit:
     auto-enable-for-applications: vim
-    enable-builtins: press
 
+    press <keys>: builtin $*
     escape|delete|enter|<direction>: builtin press $0
     undo: press escape,u
     redo: press escape,ctrl+r
     save: press ctrl+s
-    find: press escape,slash  builtin switch edit-find
+    find: press escape,slash  builtin mode edit-find
     <number> <direction>: builtin press $0*$1
     copy <number>: select $1  press ctrl+c
     paste <number>: go $1  press ctrl+v
@@ -117,7 +126,7 @@ edit:
     previous match: escape  press shift+n
     finish: escape  builtin keydown shift  builtin text zz  builtin keyup shift
     refresh: press ctrl+l
-    insert: press insert  builtin switch edit-insert
+    insert: press insert  builtin mode edit-insert
 
 vlc:
     auto-enable-for-applications: vlc
@@ -129,12 +138,16 @@ vlc:
 
 shell:
     auto-enable-for-leaf-applications: zsh
-    enable-builtins: press text
 
+    text <word>/press <keys>: builtin $*
     do it: press enter
     again: press up,enter
     page up|down: press shift+page$1
     finish: press ctrl+d
+    change directory <word>: text "cd $2" press enter
+    directory up: text "cd .." press enter
+    directory back: text "cd -" press enter
+    revisions: text "gitk" press enter
     history: text history  press enter
     execute <number>: text !$1
     delete word: builtin press ctrl+w
@@ -144,7 +157,8 @@ shell:
 terminal:
     auto-enable-for-applications: urxvt
     short-name: term
-    enable-builtins: press
+
+    press <keys>: builtin $*
 
 gitk:
     auto-enable-for-suffixes: ['- gitk']
@@ -152,5 +166,5 @@ gitk:
     <direction>: builtin press $0
     <number> <direction>: press $0*$1
     change <target>: focus change $1
-    kill: press wmkey+c
+    kill: builtin press ctrl+q
     finish: kill
