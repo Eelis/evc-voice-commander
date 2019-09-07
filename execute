@@ -79,8 +79,10 @@ def load_config():
             numbers = yaml.safe_load(stream)
         with open(configdir + '/modes.yaml', 'r') as stream:
             modes = yaml.safe_load(stream)
-        with open(configdir + '/enums.yaml', 'r') as stream:
-            enums = yaml.safe_load(stream)
+
+        if '_types' in modes:
+            enums = modes['_types']
+            del modes['_types']
 
         for mode, aliases in modes.items():
             if 'short-name' in aliases:
