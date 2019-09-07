@@ -167,11 +167,6 @@ def num_times_cmd(n, _, *cmd):
     a = action(cmd, mode)
     for i in range(int(n)): a()
 
-@make_builtin('stop')
-def cmd_stop(_):
-    global mode
-    mode = idle_mode
-
 @make_builtin('run <word>')
 def cmd_run(_, cmd):
     subprocess.Popen(cmd, shell=True,
