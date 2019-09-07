@@ -286,6 +286,10 @@ def cmd_mode(_, new_mode):
     global mode
     mode = new_mode
 
+@make_builtin('return <word>')
+def cmd_return(_, _w):
+    pass
+
 @make_builtin('press <keys>')
 def cmd_press(_, spec):
     for combo in spec.split(','):
@@ -334,7 +338,7 @@ def param_matched(param, args, i, mode):
                     if [arg] == params:
                         return (1, [('enumindex' + str(i), str(alternatives.index(arg)))], [])
                     matched, _v, mis, _pat, _r = longest_matching_pattern([(a, None)], args, mode)
-                    if matched != 0:
+                    if matched != 0: # todo: find longest, but let's get rid of enumindex hack first
                         return (matched, [], mis)
     return (0, [], [param])
 
@@ -494,6 +498,7 @@ class ParseResult():
         self.actions = []
         self.new_mode = None
         self.error = None
+        self.retval = None
 
 def quote_if_necessary(s):
     return (s if ' ' not in s else '"' + s + '"')
@@ -525,6 +530,7 @@ def handle_alias(input, current_mode, include_autoenabled):
         if sub.missing == []:
             r.actions = sub.actions
             r.new_mode = sub.new_mode
+            r.retval = sub.retval # todo: maybe there are better choices here
         else:
             qexp = list(map(quote_if_necessary, exp))
             s = indented_and_wrapped(
@@ -569,6 +575,7 @@ def handle_builtin_command(input, mode, only_global=True):
                 # which is beyond the capabilities of regular built-ins,
                 # since those only produce actions to be executed later.
                 # hence this special case for the 'mode' command.
+            if pattern == "return <word>": r.retval = input[1]
 
     elif input != []:
         cmd, *args = input
@@ -593,6 +600,7 @@ def process(words, mode, handle_builtins=True, include_autoenabled=True):
             r.actions = r2.actions
             r.new_mode = r2.new_mode
             r.error = r2.error
+            r.retval = r2.retval
 
     if r.missing != []:
         return r
@@ -612,6 +620,7 @@ def process(words, mode, handle_builtins=True, include_autoenabled=True):
             r.actions += r2.actions
             r.new_mode = r2.new_mode
             r.error = r2.error
+            r.retval = r2.retval
 
     return r
 
@@ -773,7 +782,10 @@ def confirm_input(words, pr, original_input):
         print(colored(' ???', 'red'), end='')
     print()
 
-    if pr.missing != []:
+    if pr.missing == []:
+        if pr.retval is not None:
+            print(colored(str(pr.retval), 'magenta'))
+    else:
         what = ' or '.join(map(italic_types, pr.missing))
         problem = ('missing' if n == len(words) else 'expected')
         print(colored('error: ' + problem + ' ' + what, 'red'))
