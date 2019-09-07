@@ -82,6 +82,9 @@ def load_config():
 
         if '_types' in modes:
             enums = modes['_types']
+            for e in enums:
+                if type(enums[e]) is list:
+                    enums[e] = '/'.join(enums[e])
             del modes['_types']
 
         for mode, aliases in modes.items():
