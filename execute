@@ -206,7 +206,7 @@ def cmd_define(_, *cmd):
         if matched > 0 and not bad:
             print_builtin(pattern)
 
-def italic_types(pattern):
+def italic_types_ext(pattern):
     with_markup = '/'.join(
             [' '.join(
                 ['|'.join(
@@ -228,6 +228,10 @@ def italic_types(pattern):
 
     return (with_markup, wo_markup)
 
+def italic_types(pat):
+    w, wo = italic_types_ext(pat)
+    return w
+
 @make_builtin('options')
 def cmd_options(_):
     mm = [mode]
@@ -237,11 +241,11 @@ def cmd_options(_):
     builtins_displayed = []
 
     def command_pattern(pat):
-        w, wo = italic_types(pat)
+        w, wo = italic_types_ext(pat)
         return (color_commands(w) + ', ', len(wo) + 2)
 
     def simple_pattern(pat):
-        w, wo = italic_types(pat)
+        w, wo = italic_types_ext(pat)
         return (w + ', ', len(wo) + 2)
 
     for m in mm:
@@ -271,7 +275,7 @@ def cmd_options(_):
             print(indented_and_wrapped(l, indent), end='\n\n')
 
     def pp(b):
-        w, wo = italic_types(b)
+        w, wo = italic_types_ext(b)
         return (w + ', ', len(wo) + 2)
 
     l = ([(color_mode(m) + ', ', len(m) + 2) for m in global_modes if m not in mm] +
@@ -345,17 +349,19 @@ def params_matched(params, args, mode):
     for i in range(len(params)):
         if i == len(args): break
         if params[i] == '<command>':
-            matched, b, _, _ = process(args[args_matched:], mode, True, True)
-            args_matched += matched
-            if b: break
+            pr = process(args[args_matched:], mode, True, True)
+            args_matched += pr.longest
+            if pr.missing != []: break
         else:
             b, v = param_matched(params[i], args[i], i)
             if not b: break
             vars += v
             args_matched += 1
         params_matched += 1
-    bad = (params_matched != len(params))
-    return (args_matched, bad, vars)
+    missing = []
+    if params_matched < len(params):
+        missing = [params[params_matched]] # NOOO
+    return (args_matched, missing, vars)
 
 def pstree_branch(pids, names, children):
     r = {}
@@ -452,7 +458,7 @@ def longest_matching_pattern(patterns, input, mode):
 
     longest = 0
     vars = None
-    bad = False
+    missing = []
     pattern = None
     result = None
 
@@ -462,19 +468,28 @@ def longest_matching_pattern(patterns, input, mode):
     for p, r in patterns:
         for form in p.split('/'):
             params = form.split()
-            matched, b, v = params_matched(params, input, mode)
-            if matched > longest:
+            matched, mis, v = params_matched(params, input, mode)
+            if matched == longest and mis != []:
+                missing += mis
+            elif matched > longest:
                 longest = matched
-                bad = b
-                if not bad:
+                missing = mis
+                if missing == []:
                     pattern = p
                     result = r
                     vars = v
 
     if debug:
-        print("best match (" + str(longest) + "):", pattern, " bad:", bad)
+        print("best match (" + str(longest) + "):", pattern, " missing:", missing)
 
-    return (longest, vars, bad, pattern, result)
+    return (longest, vars, missing, pattern, result)
+
+class ParseResult():
+    def __init__(self):
+        self.longest = 0
+        self.missing = []
+        self.actions = []
+        self.new_mode = None
 
 def handle_alias(input, current_mode, include_autoenabled):
     enabled_modes = [current_mode]
@@ -483,30 +498,32 @@ def handle_alias(input, current_mode, include_autoenabled):
 
     patterns = [(pat, (m, exp)) for m in enabled_modes for pat, exp in modes[m].items()]
 
-    longest, vars, bad, pattern, r = longest_matching_pattern(patterns, input, current_mode)
+    r = ParseResult()
+    r.new_mode = current_mode
 
-    acts = []
-    newmode = current_mode
-    if longest != 0 and not bad:
-        m, expansion = r
-        vars += ([(str(i), w) for i, w in enumerate(input[:longest])] +
+    r.longest, vars, r.missing, pattern, x = \
+        longest_matching_pattern(patterns, input, current_mode)
+
+    if r.longest != 0 and r.missing == []:
+        m, expansion = x
+        vars += ([(str(i), w) for i, w in enumerate(input[:r.longest])] +
                  [('windowpid', current_windowpid),
                   ('windowtitle', current_windowtitle),
-                  ('*', ' '.join(input[:longest]))])
+                  ('*', ' '.join(input[:r.longest]))])
         for varname, varvalue in vars:
             expansion = expansion.replace('$' + varname, varvalue)
         exp = split_expansion(expansion)
 
-        matched, bad, a, m = process(exp, m, True, False)
-        if not bad:
-            acts = a
-            newmode = m
+        sub = process(exp, m, True, False)
+        if sub.missing == []:
+            r.actions = sub.actions
+            r.new_mode = sub.new_mode
         else:
             print(colored('\nerror: bad alias:', 'red'),
                   color_mode(m) + ' ' + color_commands(pattern) + ':',
                   color_commands(expansion))
 
-    return (longest, bad, acts, newmode)
+    return r
 
 def print_builtin(pattern):
     func = builtin_commands[pattern]
@@ -527,12 +544,13 @@ def handle_builtin_command(input, mode, only_global=True):
         if not only_global or is_global_builtin_pattern(pat):
             patterns.append((pat, f))
 
-    acts = []
-    longest, vars, bad, pattern, f = longest_matching_pattern(patterns, input, mode)
-    if longest != 0:
-        if not bad:
-            acts = [(f, input[:longest])]
-            if pattern == 'switch <mode>': mode = input[1]
+    r = ParseResult()
+
+    r.longest, _vars, r.missing, pattern, f = longest_matching_pattern(patterns, input, mode)
+    if r.longest != 0:
+        if r.missing == []:
+            r.actions = [(f, input[:r.longest])]
+            if pattern == 'switch <mode>': r.new_mode = input[1]
                 # this applies the mode switch /during/ command evaluation,
                 # which is beyond the capabilities of regular built-ins,
                 # since those only produce actions to be executed later.
@@ -541,35 +559,45 @@ def handle_builtin_command(input, mode, only_global=True):
     elif input != []:
         cmd, *args = input
         if cmd == 'builtin':
-            matched, bad, acts, newmode = handle_builtin_command(args, mode, False)
-            matched += 1
-            return (matched, bad, acts, newmode)
+            r = handle_builtin_command(args, mode, False)
+            r.longest += 1 # to account for 'builtin' itself
+            return r
 
-    return (longest, bad, acts, mode)
+    return r
 
 def process(words, mode, handle_builtins=True, include_autoenabled=True):
-    # returns (n, bad, acts, newmode) where n is how many words were recognized, and acts is a list of actions
-
-    if words == []: return (0, False, [], mode)
+    if words == []: return ParseResult()
     cmd, *_ = words
 
-    n, bad, acts, mode2 = handle_alias(words, mode, include_autoenabled)
+    r = handle_alias(words, mode, include_autoenabled)
 
     if handle_builtins:
-        n2, b, a, mo = handle_builtin_command(words, mode)
-        if n2 > n:
-            n = n2
-            bad = b
-            acts = a
-            mode2 = mo
+        r2 = handle_builtin_command(words, mode)
+        if r2.longest > r.longest:
+            r.longest = r2.longest
+            r.missing = r2.missing
+            r.actions = r2.actions
+            r.new_mode = r2.new_mode
 
-    if bad:
-        return (n, bad, acts, mode)
-    if n != 0:
-        m, bad, acts2, mode3 = process(words[n:], mode2, True, include_autoenabled)
-        return (n + m, bad, acts + acts2, mode3)
+    if r.missing != []:
+        return r
 
-    return (n, bad, [], mode)
+    if r.longest == 0:
+        r.missing = ['<command>']
+        r.actions = []
+        r.new_mode = mode
+    else:
+        if r.new_mode is not None:
+            mode = r.new_mode
+
+        if r.longest != len(words):
+            r2 = process(words[r.longest:], mode, True, include_autoenabled)
+            r.longest += r2.longest
+            r.missing = (r2.missing if r2.longest != 0 else ['<command>'])
+            r.actions += r2.actions
+            r.new_mode = r2.new_mode
+
+    return r
 
 # input preprocessing:
 
@@ -595,12 +623,12 @@ def eval_command(words, line):
     if debug: print()
 
     handle_builtins = (mode != idle_mode)
-    n, bad, acts, newmode = process(words, mode, handle_builtins, True)
-    c = confirm_input(words, n, bad, newmode, line)
-    actnames = [' '.join(w) for _, w in acts]
+    pr = process(words, mode, handle_builtins, True)
+    c = confirm_input(words, pr.longest, pr.missing, pr.new_mode, line)
+    actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
-    for f, w in acts: f(*w)
+    for f, w in pr.actions: f(*w)
     if c: clear_line()
     print_prompt()
 
@@ -698,8 +726,8 @@ def prompt_width():
 def truncate(s, n):
     return (s[:n-3] + '...' if len(s) > n else s)
 
-def confirm_input(words, n, bad, newmode, original_input):
-    if n == 0 or (n == 1 and bad and words[0].isdigit()):
+def confirm_input(words, n, missing, newmode, original_input):
+    if n == 0 or (n == 1 and missing != [] and words[0].isdigit()):
         clear_line()
         print_prompt()
         cols = shutil.get_terminal_size().columns
@@ -713,14 +741,18 @@ def confirm_input(words, n, bad, newmode, original_input):
     if n != len(words):
         if n != 0: print(' ', end='')
         print(colored(' '.join(words[n:]), 'red'), end='')
-    elif bad:
+    elif missing != []:
         # if all words were consumed but evaluation still went bad,
         # it means additional input was missing
         print(colored(' <???>', 'red'), end='')
     print()
 
+    if missing != []:
+        print(colored("error: expected " +
+            ' or '.join(map(italic_types, missing)), 'red'))
+
     sound('good.wav', n)
-    if n != len(words) or bad:
+    if n != len(words) or missing != []:
         sound('bad.wav', 1, wait=False)
     return True
 
