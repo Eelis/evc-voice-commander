@@ -800,9 +800,9 @@ def clear_line():
     sys.stdout.flush()
 
 def prompt_string():
-    modes = get_active_modes(mode)
-    if idle_mode in modes: modes.remove(idle_mode)
-    return ','.join(map(lambda s: color_mode(short_mode_name(s)), modes)) + '> '
+    mm = list(map(short_mode_name, get_active_modes(mode)))
+    if '' in mm: mm.remove('')
+    return ','.join(map(color_mode, mm)) + '> '
 
 def print_prompt():
     print(prompt_string(), end='')
