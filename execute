@@ -379,32 +379,48 @@ def params_matched(params, args, mode, i = 0):
     while i < len(params):
         if args == []:
             break
+
+        varieties = []
+
         if args[:1] == ['evaluate']:
             sub = args[1:]
             pr = process(sub, mode, True, True)
-            if pr.longest != 0 and pr.missing == []:
-                args_matched += pr.longest
-                args = [str(pr.retval)] + sub[pr.longest:]
-                continue
+            varieties.append((pr.longest, pr.missing, [str(pr.retval)] + sub[pr.longest:], [], i))
+                # not i+1 because still on same parameter
+                # we would need to add 1 to pr.longest to account for having consumed 'evaluate',
+                # but this is canceled out by a -1 to account for the newly inserted argument.
+
         if params[i] == '<command>':
             pr = process(args, mode, True, True)
-            
-            args_matched += pr.longest
-            vars += args[:pr.longest]
-            args = args[pr.longest:]
-            if pr.longest == 0:
-                missing = [params[i]]
-                break
-            if pr.missing != []:
-                missing = pr.missing
-                break
-        else:
-            am, missing = param_matched(params[i], args, mode)
-            if am == 0: break
-            vars += [' '.join(args[:am])]
-            args_matched += am
-            args = args[am:]
-        i += 1
+            varieties.append((pr.longest, pr.missing, args[pr.longest:], args[:pr.longest], i + 1))
+
+        am, miss = param_matched(params[i], args, mode)
+        varieties.append((am, miss, args[am:], [' '.join(args[:am])], i + 1))
+
+        longest_here = 0
+        vars_here = []
+
+        for n, mis, a, v, ni in varieties:
+            if n == longest_here:
+                if mis == [] and missing != []:
+                    missing = []
+                    args = a
+                    vars_here = v
+                    i = ni
+                else:
+                    missing += mis
+            elif n > longest_here:
+                longest_here = n
+                missing = mis
+                args = a
+                vars_here = v
+                i = ni
+
+        vars += vars_here
+        args_matched += longest_here
+
+        if missing != []: # or i is None:
+            break
 
     if i < len(params) and missing == []:
         missing = [params[i]]
