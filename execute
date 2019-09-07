@@ -138,18 +138,24 @@ builtin_commands = {}
 
 def make_builtin(pattern):
     def f(g):
-        builtin_commands[pattern] = g
+        builtin_commands[pattern] = (None, g)
+        return g
+    return f
+
+def make_functional_builtin(pattern):
+    def f(g):
+        builtin_commands[pattern] = (g, None)
         return g
     return f
 
 def action(cmd, mode):
-    _, _, acts, _ = process(list(cmd), mode)
+    pr = process(list(cmd), mode)
     def combined():
-        for f, w in acts: f(*w)
+        for f, w in pr.actions: f(*w)
     return combined
 
 @make_builtin('<number> times <command>')
-def cmd_times(n, _, *cmd):
+def num_times_cmd(n, _, *cmd):
     a = action(cmd, mode)
     for i in range(int(n)): a()
 
@@ -193,6 +199,24 @@ def cmd_nop(_):
 def cmd_exit(_):
     sys.stdout.write("\033[?25h") # restore cursor
     sys.exit(0)
+
+@make_functional_builtin('<number> plus <number>')
+def cmd_plus(x, _p, y):
+    return int(x) + int(y)
+
+@make_functional_builtin('<number> minus <number>')
+def cmd_minus(x, _p, y):
+    return int(x) - int(y)
+
+@make_functional_builtin('<number> times <number>')
+def num_times_num(x, _p, y):
+    return int(x) * int(y)
+
+@make_functional_builtin('enumindex <word> <word>')
+def cmd_enumindex(_, x, y):
+    return 3 # todo
+
+# times and overloading
 
 @make_builtin('define <command>')
 def cmd_define(_, *cmd):
@@ -323,36 +347,45 @@ builtin_types = {
         lambda m: m in modes.keys()
 }
 
-def param_matched(param, args, i, mode):
+def param_matched(param, args, mode):
     arg = args[0]
     for alt in param.split('|'):
-        if alt == arg: return (1, [], [])
+        if alt == arg: return (1, [])
         for type, pred in builtin_types.items():
             if alt == '<' + type + '>' and pred(arg):
-                return (1, [], [])
+                return (1, [])
         for e in enums:
             if alt == '<' + e + '>':
                 alternatives = enums[e].split('/')
                 for a in alternatives:
                     params = a.split()
                     if [arg] == params:
-                        return (1, [('enumindex' + str(i), str(alternatives.index(arg)))], [])
+                        return (1, [])
                     matched, _v, mis, _pat, _r = longest_matching_pattern([(a, None)], args, mode)
                     if matched != 0: # todo: find longest, but let's get rid of enumindex hack first
-                        return (matched, [], mis)
-    return (0, [], [param])
+                        return (matched, mis)
+    return (0, [param])
 
-def params_matched(params, args, mode):
+def params_matched(params, args, mode, i = 0):
     vars = []
-    i = 0
     args_matched = 0
     missing = []
     while i < len(params):
-        if args_matched == len(args):
+        if args == []:
             break
+        if args[:1] == ['evaluate']:
+            sub = args[1:]
+            pr = process(sub, mode, True, True)
+            if pr.longest != 0 and pr.missing == []:
+                args_matched += pr.longest
+                args = [str(pr.retval)] + sub[pr.longest:]
+                continue
         if params[i] == '<command>':
-            pr = process(args[args_matched:], mode, True, True)
+            pr = process(args, mode, True, True)
+            
             args_matched += pr.longest
+            vars += args[:pr.longest]
+            args = args[pr.longest:]
             if pr.longest == 0:
                 missing = [params[i]]
                 break
@@ -360,10 +393,11 @@ def params_matched(params, args, mode):
                 missing = pr.missing
                 break
         else:
-            am, v, missing = param_matched(params[i], args[i:], i, mode)
+            am, missing = param_matched(params[i], args, mode)
             if am == 0: break
-            vars += [(str(i), ' '.join(args[args_matched : args_matched + am]))] + v
+            vars += [' '.join(args[:am])]
             args_matched += am
+            args = args[am:]
         i += 1
 
     if i < len(params) and missing == []:
@@ -476,7 +510,12 @@ def longest_matching_pattern(patterns, input, mode):
         for form in p.split('/'):
             params = form.split()
             matched, mis, v = params_matched(params, input, mode)
-            if matched == longest and mis != []:
+            if matched == longest and mis == []:
+                missing = []
+                pattern = p
+                result = r
+                vars = v
+            elif matched == longest and mis != []:
                 missing += mis
             elif matched > longest:
                 longest = matched
@@ -487,7 +526,7 @@ def longest_matching_pattern(patterns, input, mode):
                     vars = v
 
     if debug:
-        print("best match (" + str(longest) + "):", pattern, " missing:", missing)
+        print("best match for", input, "is", str(longest) + ":", pattern, " missing:", missing)
 
     return (longest, vars, missing, pattern, result)
 
@@ -519,10 +558,11 @@ def handle_alias(input, current_mode, include_autoenabled):
     if r.longest != 0 and r.missing == []:
         m, expansion = x
         original_expansion = expansion
-        vars += [('windowpid', current_windowpid),
+        nvars = [('windowpid', current_windowpid),
                   ('windowtitle', current_windowtitle),
-                  ('*', ' '.join(input[:r.longest]))]
-        for varname, varvalue in vars:
+                  ('*', ' '.join(input[:r.longest]))] + \
+                [(str(i), v) for i, v in enumerate(vars)]
+        for varname, varvalue in nvars:
             expansion = expansion.replace('$' + varname, varvalue)
         exp = split_expansion(expansion)
 
@@ -546,7 +586,7 @@ def handle_alias(input, current_mode, include_autoenabled):
     return r
 
 def print_builtin(pattern):
-    func = builtin_commands[pattern]
+    _, func = builtin_commands[pattern]
     print('\n' + color_commands(pattern), '= ', end='')
     lines = inspect.getsource(func).split('\n')
     while lines != [] and lines[-1] == '':
@@ -566,10 +606,12 @@ def handle_builtin_command(input, mode, only_global=True):
 
     r = ParseResult()
 
-    r.longest, _vars, r.missing, pattern, f = longest_matching_pattern(patterns, input, mode)
+    r.longest, vars, r.missing, pattern, x = longest_matching_pattern(patterns, input, mode)
     if r.longest != 0:
         if r.missing == []:
-            r.actions = [(f, input[:r.longest])]
+            f, act = x
+            if f is not None: r.retval = f(*vars)
+            if act is not None: r.actions = [(act, vars)]
             if pattern == 'mode <mode>': r.new_mode = input[1]
                 # this applies the mode switch /during/ command evaluation,
                 # which is beyond the capabilities of regular built-ins,
@@ -654,7 +696,8 @@ def eval_command(words, line):
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
-    for f, w in pr.actions: f(*w)
+    for f, w in pr.actions:
+        f(*w)
     if c: clear_line()
     print_prompt()
 
