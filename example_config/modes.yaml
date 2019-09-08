@@ -1,52 +1,81 @@
-stopped:
+# general-purpose types:
+
+<vdir>: up/down
+<hdir>: left/right
+<direction>: <hdir>/<vdir>
+<nextprev>: next/previous
+
+# main modes:
+
+default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
+    auto-enable:
+        always: True
+        other-modes: False # if default mode is the current mode, don't enable other modes
+        built-ins: False # don't recognize so-called 'global built-ins' (e.g. 'options')
+    computer|focus: builtin mode $0
     <screen>: focus $0
+    stop: builtin mode stopped
 
-system:
-    restart/shutdown/print <word>: builtin $*
-
-computer:
-    global-mode: True
-    short-name: comp
-
+computer (comp): # general commands
     mode <mode>/print <word>/press <keys>: builtin $*
     <mode>: mode $0
-    <screen>: focus $0  computer
     sleep <number>: builtin execute "$*"
     new browser: builtin run firefox  web
     new terminal: builtin run urxvt  mode terminal
     door: builtin run cctv
     calendar: builtin run "urxvt -e zsh -c 'cal; sleep 1000'"  focus
-    live jobs: builtin run "urxvt -e zsh -c top"  focus
     job tree: builtin run "urxvt -e zsh -c 'ps fax|less'"  focus
+    live jobs: builtin run "urxvt -e zsh -c top"  focus
 
-focus:
-    global-mode: True
+<screen>: chicago/washington/philadelphia
+    # the order here matters, because 'focus <screen>' passes the enumindex to the wm
+<wm-object>: window/tab/frame/screen/work space
+<target>:
+    - <direction>
+    - <screen>
+    - frame <number>
+    - <nextprev> <wm-object>
+    - new work space
 
+focus: # wm commands
     press <keys>: builtin $*
     <mode>: builtin mode $0
-    change <target>: mark  $1  attach # 'move' would be better but is poorly recognized by kaldi
+
     mark: press wmkey+d
     attach: press wmkey+a
+    change <target>: mark $1 attach
     close: press wmkey+c
     kill: press wmkey+c
-    <screen>: press wmkey+y,$enumindex0
+    split <direction>: press wmkey+s,$1
+    join: press wmkey+v
+
+    # targets: (these can be used with 'change' defined above to move the window to the target)
     <direction>: press wmkey+$0
-    next: press wmkey+tab
-    previous: press wmkey+shift+tab
+    <screen>: press wmkey+y press evaluate builtin enumindex screen $0
+    frame <number>: press wmkey+j,$1
+    next window: press wmkey+tab
+    previous window: press wmkey+shift+tab
     next work space: press wmkey+pagedown
     previous work space: press wmkey+pageup
     new work space: press wmkey+w
-    split <direction>: press wmkey+s,$1
-    join: press wmkey+v
-    go 2 frame <number>: press wmkey+j,$3
-    change 2 frame <number>: mark go 2 frame $3 attach
+
+system: # evc commands
+    restart/shutdown: builtin $*
 
 # specific applications:
 
-mail:
-    auto-enable-for-applications: thunderbird
+less:
+    auto-enable:
+        for-applications: less
+    press <keys>: builtin $*
+    page <vdir>: press page$1
+    finish: press q
+    find: press slash
 
-    home|delete|escape|up|down: builtin press $0
+mail:
+    auto-enable:
+        for-applications: thunderbird
+    home|delete|escape|<vdir>: builtin press $0
     next: builtin press f
     select <number>: keydown shift  press $1*down,up  keyup shift
     <number> <direction>: builtin press $0*$1
@@ -55,16 +84,9 @@ web-navigate:
     <number>: builtin text $0  builtin mode web
     go: builtin press enter
 
-less:
-    auto-enable-for-applications: less
-
-    press <keys>: builtin $*
-    finish: press q
-    find: press slash
-
 web:
-    auto-enable-for-applications: firefox-bin
-
+    auto-enable:
+        for-applications: firefox-bin
     press <keys>/text <word>: builtin $*
     home|escape|delete|<direction>|space: builtin press $0
     erase: press shift+home,delete
@@ -82,8 +104,8 @@ web:
     paste: press ctrl+v
     start of page: press home
     end of page: press end
-    page up|down: press page$1
-    <number> pages up|down: press $0*page$2
+    page <vdir>: press page$1
+    <number> pages <vdir>: press $0*page$2
     fresh: press ctrl+t
     previous: builtin press ctrl+pageup
     next: builtin press ctrl+pagedown
@@ -103,8 +125,8 @@ edit-insert:
     text <word>: builtin $*
 
 edit:
-    auto-enable-for-applications: vim
-
+    auto-enable:
+        for-applications: vim
     press <keys>: builtin $*
     escape|delete|enter|<direction>: builtin press $0
     undo: press escape,u
@@ -129,20 +151,20 @@ edit:
     insert: press insert  builtin mode edit-insert
 
 vlc:
-    auto-enable-for-applications: vlc
-
+    auto-enable:
+        for-applications: vlc
     maximize: press f
     kill: press wmkey+c
     mark: press wmkey+d  focus
     change <target>: focus change $1
 
 shell:
-    auto-enable-for-leaf-applications: zsh
-
+    auto-enable:
+        for-leaf-applications: zsh
     text <word>/press <keys>: builtin $*
     do it: press enter
     again: press up,enter
-    page up|down: press shift+page$1
+    page <vdir>: press shift+page$1
     finish: press ctrl+d
     change directory <word>: text "cd $2" press enter
     directory up: text "cd .." press enter
@@ -154,15 +176,15 @@ shell:
     <direction>|space: builtin press $0
     erase: press ctrl+u
 
-terminal:
-    auto-enable-for-applications: urxvt
+terminal (term):
+    auto-enable:
+        for-applications: urxvt
     short-name: term
-
     press <keys>: builtin $*
 
 gitk:
-    auto-enable-for-suffixes: ['- gitk']
-
+    auto-enable:
+        for-suffixes: ['- gitk']
     <direction>: builtin press $0
     <number> <direction>: press $0*$1
     change <target>: focus change $1
