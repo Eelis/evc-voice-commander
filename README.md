@@ -1,7 +1,6 @@
-EVC Voice Commander
-===================
+# EVC Voice Commander
 
-1. Introduction
+## 1. Introduction
 
 EVC is a tool for controlling a computer by speaking commands to it.
 
@@ -18,7 +17,7 @@ Features:
 - command groups for applications auto-enabled based on process name or window title
 
 
-2. Usage:
+## 2. Usage:
 
     mkdir ~/.evc-voice-controller
     cp example_config/* ~/.evc-voice-controller/
