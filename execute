@@ -22,7 +22,7 @@ import click
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame # apt-get install python-pygame
 
-sound_effects = sys.stdout.isatty()
+sound_effects = False
 mode = None
 modes = {}
 numbers = {}
@@ -53,7 +53,7 @@ extra_key_names = {
 }
 
 short_mode_names = {}
-configdir = os.getenv('HOME') + '/.evc-voice-commander'
+configdir = ''
 auto_enable_cfg = {}
 global_builtins = ['options', 'define', 'builtin', 'times']
     # this order is also used for display to humans
@@ -858,28 +858,35 @@ c_asound_error_handler = ERROR_HANDLER_FUNC(py_asound_error_handler)
 
 @contextmanager
 def noalsaerr():
-    asound = cdll.LoadLibrary('libasound.so')
-    asound.snd_lib_error_set_handler(c_asound_error_handler)
+    if sound_effects:
+        asound = cdll.LoadLibrary('libasound.so')
+        asound.snd_lib_error_set_handler(c_asound_error_handler)
     yield
-    asound.snd_lib_error_set_handler(None)
+    if sound_effects:
+        asound.snd_lib_error_set_handler(None)
 
 @click.command()
 @click.option('--debug', default=False,type=bool)
 @click.option('--color', default=True,type=bool)
+@click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False,type=bool)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
 @click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
-def evc(debug, color, dryrun, volume, mode, cmd):
+def evc(debug, color, configdir, dryrun, volume, mode, cmd):
+    global sound_effects
     globals()['mode'] = mode
     globals()['color'] = color
+    globals()['configdir'] = configdir
     globals()['dryrun'] = dryrun
     globals()['debug'] = debug
     initial_words = list(cmd)
-    pygame.init()
-    pygame.mixer.music.set_volume(volume)
+    if volume != 0:
+        pygame.init()
+        pygame.mixer.music.set_volume(volume)
+        sound_effects = True
 
     sys.stdout.write("\033[?25l") # hide cursor:
 
