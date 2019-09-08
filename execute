@@ -866,10 +866,10 @@ def noalsaerr():
         asound.snd_lib_error_set_handler(None)
 
 @click.command()
-@click.option('--debug', default=False,type=bool)
+@click.option('--debug', default=False,type=bool, is_flag=True)
 @click.option('--color', default=True,type=bool)
 @click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
-@click.option('--dryrun', default=False,type=bool)
+@click.option('--dryrun', default=False, type=bool, is_flag=True)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
