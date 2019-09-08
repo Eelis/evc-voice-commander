@@ -593,7 +593,7 @@ def handle_alias(input, current_mode, include_autoenabled):
                 [colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
                 [colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
             r.error = colored('\nerror:', 'red') + '\n' + \
-                '  input ' + colored(' '.join(input), 'green') + ' matched alias:\n' + \
+                '  input ' + colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
                 '    ' + alias_definition_str(m, pattern, 4) + '\n' + \
                 '  invalid expansion:\n    ' + s + '\n' + \
                 '  ' + ('missing ' if sub.longest == len(exp) else 'expected ') + \
