@@ -33,17 +33,17 @@ t computer 3 times print hello
 t computer builtin return 3
     #> 3
 
-# arithmetic
-t computer builtin 4 plus 2
-    #> 6
-
-# more arithmetic
-t computer builtin 5 plus evaluate builtin 2 times 4
-    #> 13
-
 # 'evaluate'
 t computer builtin return evaluate builtin return 5
     #> 5
+
+# arithmetic
+t calculate 4 plus 2
+    #> 6
+
+# nested arithmetic with 'evaluate'
+t calculate 2 plus evaluate 3 times 4
+    #> 14
 
 # run
 t computer calendar

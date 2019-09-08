@@ -192,3 +192,6 @@ gitk:
     change <target>: focus change $1
     kill: builtin press ctrl+q
     finish: kill
+
+calculate (calc):
+    <number> plus|times|minus <number>/print <word>: builtin $*
