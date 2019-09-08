@@ -346,12 +346,13 @@ def param_matched(param, args, mode):
     arg = args[0]
     for alt in param.split('|'):
         if alt == arg: return (1, [])
-        for type, pred in builtin_types.items():
-            if alt == '<' + type + '>' and pred(arg):
-                return (1, [])
-        for e in enums:
-            if alt == '<' + e + '>':
-                alternatives = enums[e].split('/')
+        if alt.startswith('<'): # oh it's a type
+            type = alt[1:-1]
+            if type in builtin_types:
+                pred = builtin_types[type]
+                if pred(arg): return (1, [])
+            elif type in enums:
+                alternatives = enums[type].split('/')
                 for a in alternatives:
                     params = a.split()
                     if [arg] == params:
@@ -359,6 +360,8 @@ def param_matched(param, args, mode):
                     matched, _v, mis, _pat, _r = longest_matching_pattern([(a, None)], args, mode)
                     if matched != 0: # todo: find longest, but let's get rid of enumindex hack first
                         return (matched, mis)
+            elif type != 'command':
+                raise Exception('undefined type: ' + type)
     return (0, [param])
 
 def params_matched(params, args, mode, i = 0):
