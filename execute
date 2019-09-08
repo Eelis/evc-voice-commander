@@ -242,11 +242,14 @@ def strip_markup(s):
 turn_on_italic = "\x1B[3m"
 turn_off_italic = "\x1B[23m"
 
+def italic(s):
+    return turn_on_italic + s + turn_off_italic if color else s
+
 def italic_types(pattern):
     return '/'.join(
             [' '.join(
                 ['|'.join(
-                    [ (turn_on_italic + alt[1:-1] + turn_off_italic if alt.startswith('<') else alt)
+                    [ (italic(alt[1:-1]) if alt.startswith('<') else alt)
                         for alt in param.split('|')
                     ])
                     for param in form.split(' ')
@@ -827,12 +830,13 @@ def confirm_input(words, pr, original_input):
         return False
 
     if n != len(words):
-        if n != 0: print(' ', end='')
-        print(colored(' '.join(words[n:]), 'red'), end='')
+        if prompt:
+            if n != 0: print(' ', end='')
+            print(colored(' '.join(words[n:]), 'red'), end='')
     elif pr.missing != []:
         # if all words were consumed but evaluation still went bad,
         # it means additional input was missing
-        print(colored(' ???', 'red'), end='')
+        if prompt: print(colored(' ???', 'red'), end='')
     if prompt:
         print()
 

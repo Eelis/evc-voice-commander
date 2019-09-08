@@ -56,3 +56,8 @@ t focus change next work space
 # current mode overrides auto-enabled modes
 t focus,edit,term left
     #> press wmkey+left
+
+# diagnostic for bad command
+t computer focus lol
+    #> error: expected command
+    #> mode focus
