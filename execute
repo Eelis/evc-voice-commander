@@ -36,6 +36,7 @@ debug = False
 dryrun = False
 prompt = True
 color = True
+explicitly_autoenabled = []
 
 def colored(s, c):
     if not color: return s
@@ -461,6 +462,8 @@ def occurs_as_leaf_in_branch(x, processes):
 def mode_is_auto_enabled(current_mode, candidate):
     c = auto_enable_cfg[current_mode]
     if not c['other-modes']: return False
+
+    if candidate in explicitly_autoenabled: return True
 
     c = auto_enable_cfg[candidate]
     if c['always']: return True
@@ -899,7 +902,12 @@ def noalsaerr():
 @click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
 def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
-    global sound_effects
+    global sound_effects, explicitly_autoenabled
+
+    mm = mode.split(',')
+    explicitly_autoenabled = mm[1:]
+    mode = mm[0]
+
     globals()['mode'] = mode
     globals()['color'] = color
     globals()['configdir'] = configdir
