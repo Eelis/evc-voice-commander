@@ -894,12 +894,15 @@ def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
         pygame.mixer.music.set_volume(volume)
         sound_effects = True
 
-    if sys.stdout.isatty():
-        sys.stdout.write("\033[?25l") # hide cursor:
-
     load_config()
 
-    if sys.stdout.isatty() and prompt: print()
+    if mode not in modes:
+        print("no such mode:", mode)
+        return
+
+    if sys.stdout.isatty() and prompt:
+        print()
+        sys.stdout.write("\033[?25l") # hide cursor
 
     with noalsaerr():
         if initial_words != []:
@@ -907,7 +910,7 @@ def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
         else:
             asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
 
-    if sys.stdout.isatty():
+    if sys.stdout.isatty() and prompt:
         sys.stdout.write("\033[?25h") # restore cursor
 
 if __name__ == '__main__': evc()
