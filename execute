@@ -89,14 +89,14 @@ def load_config():
             del modes['<' + e + '>']
 
         # handle shortnames:
-        for mode, aliases in modes.items():
-            if mode.endswith(')'):
-                i = mode.find('(')
-                sn = mode[i+1:-1]
-                short_mode_names[mode[:i]] = sn
         def remove_shortname(s):
             i = s.find('(')
-            return (s if i == -1 else s[:i])
+            return (s if i == -1 else s[:i].strip())
+        for mode, aliases in modes.items():
+            realname = remove_shortname(mode)
+            if realname != mode:
+                shortname = mode[mode.find('(') + 1: -1]
+                short_mode_names[realname] = shortname
         modes = dict([(remove_shortname(m), a) for m, a in modes.items()])
 
         # handle auto-enabling:
