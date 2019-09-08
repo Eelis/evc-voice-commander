@@ -47,7 +47,7 @@ extra_key_names = {
 }
 
 short_mode_names = {}
-configdir = os.getenv('HOME') + '/.evc-voice-controller'
+configdir = os.getenv('HOME') + '/.evc-voice-commander'
 auto_enable_cfg = {}
 global_builtins = ['options', 'define', 'builtin', 'times']
     # this order is also used for display to humans

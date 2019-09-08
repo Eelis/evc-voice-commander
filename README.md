@@ -19,6 +19,6 @@ Features:
 
 ## 2. Usage:
 
-    mkdir ~/.evc-voice-controller
-    cp example_config/* ~/.evc-voice-controller/
-    ./evc-voice-controller
+    mkdir ~/.evc-voice-commander
+    cp example_config/* ~/.evc-voice-commander/
+    ./evc-voice-commander
