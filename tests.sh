@@ -52,3 +52,7 @@ t computer calendar
 # complex custom types (<target>)
 t focus change next work space
     #> press wmkey+d, press wmkey+pagedown, press wmkey+a
+
+# current mode overrides auto-enabled modes
+t focus,edit,term left
+    #> press wmkey+left
