@@ -62,7 +62,9 @@ focus: # wm commands
     new work space: press wmkey+w
 
 system: # evc commands
-    restart/shutdown: builtin $*
+    restart/shutdown/mode <mode>: builtin $*
+    computer: mode $0
+    change commands: computer in new shell run "vim $configdir/modes.yaml"
 
 # specific applications:
 
