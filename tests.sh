@@ -48,3 +48,7 @@ t calculate 2 plus evaluate 3 times 4
 # run
 t computer calendar
     #> run urxvt -e zsh -c 'cal; sleep 1000'
+
+# complex custom types (<target>)
+t focus change next work space
+    #> press wmkey+d, press wmkey+pagedown, press wmkey+a
