@@ -305,9 +305,9 @@ def cmd_mode(_, new_mode):
     global mode
     mode = new_mode
 
-@make_builtin('return <word>')
-def cmd_return(_, _w):
-    pass
+@make_functional_builtin('return <word>')
+def cmd_return(_, w):
+    return w
 
 @make_builtin('press <keys>')
 def cmd_press(_, spec):
@@ -617,7 +617,6 @@ def handle_builtin_command(input, mode, only_global=True):
                 # which is beyond the capabilities of regular built-ins,
                 # since those only produce actions to be executed later.
                 # hence this special case for the 'mode' command.
-            if pattern == "return <word>": r.retval = input[1]
 
     elif input != []:
         cmd, *args = input
@@ -691,7 +690,6 @@ def eval_command(words, line):
 
     handle_builtins = auto_enable_cfg[mode]['built-ins']
     pr = process(words, mode, handle_builtins, True)
-
     c = confirm_input(words, pr, line)
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
