@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 
+import time
 import os
 import subprocess
 import sys
 import re
 import itertools
-import time
 import fileinput
-import pyautogui # better than pynput because pynput doesn't let you send mod+letter
-import yaml
 import collections
-import psutil
-import asyncio
 import shutil
-import inspect
 import termcolor
-from ctypes import *
 from contextlib import contextmanager
+from ctypes import *
 import click
+import yaml
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-import pygame # apt-get install python-pygame
 
 sound_effects = False
 mode = None
@@ -122,11 +117,36 @@ def is_global_builtin_pattern(pat):
         pat = pat[1:]
     return pat != [] and pat[0] in global_builtins
 
+keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
+    ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`',
+    'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~',
+    'accept', 'add', 'alt', 'altleft', 'altright', 'apps', 'backspace',
+    'browserback', 'browserfavorites', 'browserforward', 'browserhome',
+    'browserrefresh', 'browsersearch', 'browserstop', 'capslock', 'clear',
+    'convert', 'ctrl', 'ctrlleft', 'ctrlright', 'decimal', 'del', 'delete',
+    'divide', 'down', 'end', 'enter', 'esc', 'escape', 'execute', 'f1', 'f10',
+    'f11', 'f12', 'f13', 'f14', 'f15', 'f16', 'f17', 'f18', 'f19', 'f2', 'f20',
+    'f21', 'f22', 'f23', 'f24', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9',
+    'final', 'fn', 'hanguel', 'hangul', 'hanja', 'help', 'home', 'insert', 'junja',
+    'kana', 'kanji', 'launchapp1', 'launchapp2', 'launchmail',
+    'launchmediaselect', 'left', 'modechange', 'multiply', 'nexttrack',
+    'nonconvert', 'num0', 'num1', 'num2', 'num3', 'num4', 'num5', 'num6',
+    'num7', 'num8', 'num9', 'numlock', 'pagedown', 'pageup', 'pause', 'pgdn',
+    'pgup', 'playpause', 'prevtrack', 'print', 'printscreen', 'prntscrn',
+    'prtsc', 'prtscr', 'return', 'right', 'scrolllock', 'select', 'separator',
+    'shift', 'shiftleft', 'shiftright', 'sleep', 'space', 'stop', 'subtract', 'tab',
+    'up', 'volumedown', 'volumemute', 'volumeup', 'win', 'winleft', 'winright', 'yen',
+    'command', 'option', 'optionleft', 'optionright']
+        # these coincide with names in pyautogui
+        # (which we don't want to import just for this list because it takes ~60 milliseconds)
+
 def is_keyname(s):
-    return s in pyautogui.KEYBOARD_KEYS or s in extra_key_names
+    return s in keynames or s in extra_key_names
 
 def is_keyspec(spec):
-    all_keys = pyautogui.KEYBOARD_KEYS + list(extra_key_names.keys())
+    all_keys = keynames + list(extra_key_names.keys())
     for combo in spec.split(','):
         mult = combo.find('*')
         if mult != -1:
@@ -185,11 +205,13 @@ def cmd_restart(_):
 @make_builtin('keydown <key>')
 def press_key(_, key_name):
     if not dryrun:
+        import pyautogui
         pyautogui.keyDown(key_by_name(key_name))
 
 @make_builtin('keyup <key>')
 def release_key(_, key_name):
     if not dryrun:
+        import pyautogui
         pyautogui.keyUp(key_by_name(key_name))
 
 @make_builtin('nop')
@@ -302,6 +324,7 @@ def cmd_options(_):
 
 @make_builtin('text <word>')
 def cmd_text(_, s):
+    import pyautogui
     pyautogui.press([c for c in s])
 
 @make_builtin('mode <mode>')
@@ -315,6 +338,7 @@ def cmd_return(_, w):
 
 @make_builtin('press <keys>')
 def cmd_press(_, spec):
+    import pyautogui
     for combo in spec.split(','):
         times = 1
         mult = combo.find('*')
@@ -435,6 +459,7 @@ def pstree_branch(pids, names, children, stop_on_terminal=False):
     return r
 
 def process_family(pid):
+    import psutil
     children = collections.defaultdict(list)
     names = {}
     for p in psutil.process_iter():
@@ -602,6 +627,7 @@ def handle_alias(input, current_mode, include_autoenabled):
     return r
 
 def print_builtin(pattern):
+    import inspect
     _, func = builtin_commands[pattern]
     print('\n' + color_commands(pattern), '= ', end='')
     lines = inspect.getsource(func).split('\n')
@@ -715,6 +741,7 @@ def eval_command(words, line):
     if c: clear_line()
 
 async def process_lines(input):
+    import asyncio
     global mode
     loop = asyncio.get_event_loop()
     reader = asyncio.StreamReader(loop=loop, limit=asyncio.streams._DEFAULT_LIMIT)
@@ -781,6 +808,7 @@ def alias_definition_str(mode, pattern, start_column=0):
 
 def sound(n, count=1, wait=True):
     if count == 0 or not sound_effects: return
+    import pygame
     pygame.mixer.music.load("sounds/" + n)
     for i in range(0, count):
         pygame.mixer.music.play()
@@ -924,6 +952,7 @@ def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
     globals()['prompt'] = prompt
     initial_words = list(cmd)
     if volume != 0:
+        import pygame
         pygame.init()
         pygame.mixer.music.set_volume(volume)
         sound_effects = True
@@ -942,6 +971,7 @@ def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
         if initial_words != []:
             eval_command(initial_words, ' '.join(initial_words))
         else:
+            import asyncio
             asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
 
     if sys.stdout.isatty() and prompt:
