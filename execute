@@ -150,7 +150,6 @@ def make_functional_builtin(pattern):
     return f
 
 def action(cmd, mode):
-    if dryrun: return lambda: None
     pr = process(list(cmd), mode)
     def combined():
         for f, w in pr.actions: f(*w)
@@ -163,6 +162,7 @@ def num_times_cmd(n, _, *cmd):
 
 @make_builtin('run <word>')
 def cmd_run(_, cmd):
+    if dryrun: return
     subprocess.Popen(cmd, shell=True,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -170,6 +170,7 @@ def cmd_run(_, cmd):
 
 @make_builtin('execute <word>')
 def cmd_execute(_, cmd):
+    if dryrun: return
     output = subprocess.Popen(cmd, shell=True,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -182,11 +183,13 @@ def cmd_restart(_):
 
 @make_builtin('keydown <key>')
 def press_key(_, key_name):
-    pyautogui.keyDown(key_by_name(key_name))
+    if not dryrun:
+        pyautogui.keyDown(key_by_name(key_name))
 
 @make_builtin('keyup <key>')
 def release_key(_, key_name):
-    pyautogui.keyUp(key_by_name(key_name))
+    if not dryrun:
+        pyautogui.keyUp(key_by_name(key_name))
 
 @make_builtin('nop')
 def cmd_nop(_):
@@ -693,9 +696,8 @@ def eval_command(words, line):
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
-    if not dryrun:
-        for f, w in pr.actions:
-            f(*w)
+    for f, w in pr.actions:
+        f(*w)
     if c: clear_line()
 
 async def process_lines(input):
