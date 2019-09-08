@@ -44,3 +44,7 @@ t computer builtin 5 plus evaluate builtin 2 times 4
 # 'evaluate'
 t computer builtin return evaluate builtin return 5
     #> 5
+
+# run
+t computer calendar
+    #> run urxvt -e zsh -c 'cal; sleep 1000'

@@ -21,11 +21,13 @@ computer (comp): # general commands
     <mode>: mode $0
     sleep <number>: builtin execute "$*"
     new browser: builtin run firefox  web
-    new terminal: builtin run urxvt  mode terminal
+    new terminal: builtin run urxvt  terminal
     door: builtin run cctv
-    calendar: builtin run "urxvt -e zsh -c 'cal; sleep 1000'"  focus
-    job tree: builtin run "urxvt -e zsh -c 'ps fax|less'"  focus
-    live jobs: builtin run "urxvt -e zsh -c top"  focus
+    in new terminal run <word>: builtin run "urxvt -e $4"
+    in new shell run <word>: in new terminal run "zsh -c '$4'"
+    calendar: in new shell run "cal; sleep 1000"
+    job tree: in new shell run "ps fax|less"
+    live jobs: in new shell run top
 
 <screen>: chicago/washington/philadelphia
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm
