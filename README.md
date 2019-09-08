@@ -21,4 +21,4 @@ Features:
 
     mkdir ~/.evc-voice-controller
     cp example_config/* ~/.evc-voice-controller/
-    ./evc
+    ./evc-voice-controller
