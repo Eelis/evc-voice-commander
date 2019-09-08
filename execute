@@ -830,7 +830,9 @@ def confirm_input(words, pr, original_input):
         if pr.retval is not None:
             print(colored(str(pr.retval), 'magenta'))
     else:
-        what = ' or '.join(map(italic_types, pr.missing))
+        uu = []
+        for m in pr.missing: uu += m.split('|')
+        what = ' or '.join(map(italic_types, list(set(uu))))
         problem = ('missing' if n == len(words) else 'expected')
         print(colored('error: ' + problem + ' ' + what, 'red'))
 
