@@ -14,7 +14,7 @@ import psutil
 import asyncio
 import shutil
 import inspect
-from termcolor import colored
+import termcolor
 from ctypes import *
 from contextlib import contextmanager
 import click
@@ -22,7 +22,7 @@ import click
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame # apt-get install python-pygame
 
-sound_effects = True
+sound_effects = sys.stdout.isatty()
 mode = None
 modes = {}
 numbers = {}
@@ -33,6 +33,12 @@ current_windowpid = ''
 current_windowtitle = ''
 current_windowprocesses = {}
 debug = False
+dryrun = False
+color = True
+
+def colored(s, c):
+    if not color: return s
+    return termcolor.colored(s, c)
 
 extra_key_names = {
     'space': ' ',
@@ -143,6 +149,7 @@ def make_functional_builtin(pattern):
     return f
 
 def action(cmd, mode):
+    if dryrun: return lambda: None
     pr = process(list(cmd), mode)
     def combined():
         for f, w in pr.actions: f(*w)
@@ -685,8 +692,9 @@ def eval_command(words, line):
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
-    for f, w in pr.actions:
-        f(*w)
+    if not dryrun:
+        for f, w in pr.actions:
+            f(*w)
     if c: clear_line()
     print_prompt()
 
@@ -766,6 +774,7 @@ def short_mode_name(mode):
     return (short_mode_names[mode] if mode in short_mode_names else mode)
 
 def clear_line():
+    if not sys.stdout.isatty(): return
     cols = shutil.get_terminal_size().columns
     print('\r' + ' ' * cols + '\r', end='')
     sys.stdout.flush()
@@ -856,13 +865,17 @@ def noalsaerr():
 
 @click.command()
 @click.option('--debug', default=False,type=bool)
+@click.option('--color', default=True,type=bool)
+@click.option('--dryrun', default=False,type=bool)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
 @click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
-def evc(debug, volume, mode, cmd):
+def evc(debug, color, dryrun, volume, mode, cmd):
     globals()['mode'] = mode
+    globals()['color'] = color
+    globals()['dryrun'] = dryrun
     globals()['debug'] = debug
     initial_words = list(cmd)
     pygame.init()
