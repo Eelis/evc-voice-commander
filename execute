@@ -34,6 +34,7 @@ current_windowtitle = ''
 current_windowprocesses = {}
 debug = False
 dryrun = False
+prompt = True
 color = True
 
 def colored(s, c):
@@ -696,7 +697,7 @@ def eval_command(words, line):
         for f, w in pr.actions:
             f(*w)
     if c: clear_line()
-    print_prompt()
+    if prompt: print_prompt()
 
 async def process_lines(input):
     global mode
@@ -705,7 +706,7 @@ async def process_lines(input):
     await loop.connect_read_pipe(
         lambda: asyncio.StreamReaderProtocol(reader, loop=loop), input)
 
-    print_prompt()
+    if prompt: print_prompt()
     last_active_modes = get_active_modes(mode)
 
     while True:
@@ -716,8 +717,9 @@ async def process_lines(input):
             m = get_active_modes(mode)
             if last_active_modes != m:
                 last_active_modes = m
-                clear_line()
-                print_prompt()
+                if prompt:
+                    clear_line()
+                    print_prompt()
         else:
             if not line: break # EOF
             else:
@@ -774,7 +776,7 @@ def short_mode_name(mode):
     return (short_mode_names[mode] if mode in short_mode_names else mode)
 
 def clear_line():
-    if not sys.stdout.isatty(): return
+    if not sys.stdout.isatty() or not prompt: return
     cols = shutil.get_terminal_size().columns
     print('\r' + ' ' * cols + '\r', end='')
     sys.stdout.flush()
@@ -801,9 +803,10 @@ def confirm_input(words, pr, original_input):
         print(colored(truncate(original_input, cols - len(strip_markup(prp))), 'yellow'), end='\r')
         sys.stdout.flush()
         return False
-    clear_line()
-    print_prompt()
-    print(colored(' '.join(words[:n]), 'green'), end='')
+    if prompt:
+        clear_line()
+        print_prompt()
+        print(colored(' '.join(words[:n]), 'green'), end='')
     if pr.error is not None:
         print(pr.error)
         sound('good.wav', n)
@@ -817,7 +820,8 @@ def confirm_input(words, pr, original_input):
         # if all words were consumed but evaluation still went bad,
         # it means additional input was missing
         print(colored(' ???', 'red'), end='')
-    print()
+    if prompt:
+        print()
 
     if pr.missing == []:
         if pr.retval is not None:
@@ -868,6 +872,7 @@ def noalsaerr():
 @click.command()
 @click.option('--debug', default=False,type=bool, is_flag=True)
 @click.option('--color', default=True,type=bool)
+@click.option('--prompt', default=True,type=bool)
 @click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False, type=bool, is_flag=True)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
@@ -875,24 +880,26 @@ def noalsaerr():
                                                    # (b) won't interfere with speech recognition.
 @click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
-def evc(debug, color, configdir, dryrun, volume, mode, cmd):
+def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
     global sound_effects
     globals()['mode'] = mode
     globals()['color'] = color
     globals()['configdir'] = configdir
     globals()['dryrun'] = dryrun
     globals()['debug'] = debug
+    globals()['prompt'] = prompt
     initial_words = list(cmd)
     if volume != 0:
         pygame.init()
         pygame.mixer.music.set_volume(volume)
         sound_effects = True
 
-    sys.stdout.write("\033[?25l") # hide cursor:
+    if sys.stdout.isatty():
+        sys.stdout.write("\033[?25l") # hide cursor:
 
     load_config()
 
-    print()
+    if sys.stdout.isatty() and prompt: print()
 
     with noalsaerr():
         if initial_words != []:
@@ -900,6 +907,7 @@ def evc(debug, color, configdir, dryrun, volume, mode, cmd):
         else:
             asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
 
-    sys.stdout.write("\033[?25h") # restore cursor
+    if sys.stdout.isatty():
+        sys.stdout.write("\033[?25h") # restore cursor
 
 if __name__ == '__main__': evc()
