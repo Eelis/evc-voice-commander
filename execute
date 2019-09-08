@@ -55,17 +55,18 @@ auto_enable_cfg = {}
 global_builtins = ['options', 'define', 'builtin', 'times']
     # this order is also used for display to humans
 
+def load_yaml(f):
+    with open(f, 'r') as stream:
+        return yaml.load(stream, yaml.CLoader)
+
 def load_config():
     global word_replacements, numbers, modes, enums, short_mode_names, auto_enable_cfg
     short_mode_names = {}
     auto_enable_cfg = {}
     try:
-        with open(configdir + '/replacements.yaml', 'r') as stream:
-            word_replacements = yaml.safe_load(stream)
-        with open(configdir + '/numbers.yaml', 'r') as stream:
-            numbers = yaml.safe_load(stream)
-        with open(configdir + '/modes.yaml', 'r') as stream:
-            modes = yaml.safe_load(stream)
+        word_replacements = load_yaml(configdir + '/replacements.yaml')
+        numbers = load_yaml(configdir + '/numbers.yaml')
+        modes = load_yaml(configdir + '/modes.yaml')
 
         # handle enums:
         enums = {}
