@@ -101,18 +101,14 @@ def load_config():
 
         # handle auto-enabling:
         for mode, aliases in modes.items():
-            if 'auto-enable-for-applications' in aliases:
-                auto_enable_for_applications[mode] = aliases['auto-enable-for-applications'].split()
-                del aliases['auto-enable-for-applications']
-            if 'auto-enable-for-leaf-applications' in aliases:
-                auto_enable_for_leaf_applications[mode] = aliases['auto-enable-for-leaf-applications'].split()
-                del aliases['auto-enable-for-leaf-applications']
-            if 'auto-enable-for-prefixes' in aliases:
-                auto_enable_for_prefixes[mode] = aliases['auto-enable-for-prefixes']
-                del aliases['auto-enable-for-prefixes']
-            if 'auto-enable-for-suffixes' in aliases:
-                auto_enable_for_suffixes[mode] = aliases['auto-enable-for-suffixes']
-                del aliases['auto-enable-for-suffixes']
+            if 'auto-enable' in aliases:
+                tests = aliases['auto-enable']
+                del aliases['auto-enable']
+                for k, v in tests:
+                    if k == 'for-applications': auto_enable_for_applications[mode] = v.split()
+                    if k == 'for-leaf-applications': auto_enable_for_leaf_applications[mode] = v.split()
+                    if k == 'for-prefixes': auto_enable_for_prefixes[mode] = v
+                    if k == 'for-suffixes': auto_enable_for_suffixes[mode] = v
 
     except Exception as e:
         print("\nerror loading config:", e)
