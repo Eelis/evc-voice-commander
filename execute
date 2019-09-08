@@ -23,9 +23,8 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame # apt-get install python-pygame
 
 sound_effects = True
-idle_mode = 'stopped'
-mode = idle_mode
-modes = {idle_mode:{}}
+mode = None
+modes = {}
 numbers = {}
 word_replacements = {}
 enums = {}
@@ -48,28 +47,15 @@ extra_key_names = {
 }
 
 short_mode_names = {}
-
 configdir = os.getenv('HOME') + '/.evc-voice-controller'
-
-auto_enable_for_applications = {}
-auto_enable_for_leaf_applications = {}
-auto_enable_for_suffixes = {}
-auto_enable_for_prefixes = {}
-
-global_builtins = ['stop', 'options', 'define', 'builtin', 'times']
+auto_enable_cfg = {}
+global_builtins = ['options', 'define', 'builtin', 'times']
     # this order is also used for display to humans
 
 def load_config():
-    global word_replacements, numbers, modes, enums, short_mode_names
-    global auto_enable_for_applications
-    global auto_enable_for_leaf_applications
-    global auto_enable_for_suffixes
-    global auto_enable_for_prefixes
+    global word_replacements, numbers, modes, enums, short_mode_names, auto_enable_cfg
     short_mode_names = {}
-    auto_enable_for_applications = {}
-    auto_enable_for_leaf_applications = {}
-    auto_enable_for_suffixes = {}
-    auto_enable_for_prefixes = {}
+    auto_enable_cfg = {}
     try:
         with open(configdir + '/replacements.yaml', 'r') as stream:
             word_replacements = yaml.safe_load(stream)
@@ -101,14 +87,18 @@ def load_config():
 
         # handle auto-enabling:
         for mode, aliases in modes.items():
+            cfg = {}
             if 'auto-enable' in aliases:
-                tests = aliases['auto-enable']
+                cfg = aliases['auto-enable']
                 del aliases['auto-enable']
-                for k, v in tests:
-                    if k == 'for-applications': auto_enable_for_applications[mode] = v.split()
-                    if k == 'for-leaf-applications': auto_enable_for_leaf_applications[mode] = v.split()
-                    if k == 'for-prefixes': auto_enable_for_prefixes[mode] = v
-                    if k == 'for-suffixes': auto_enable_for_suffixes[mode] = v
+            if 'always' not in cfg: cfg['always'] = False
+            if 'built-ins' not in cfg: cfg['built-ins'] = True
+            if 'other-modes' not in cfg: cfg['other-modes'] = True
+            cfg['for-applications'] = (cfg['for-applications'].split() if 'for-applications' in cfg else [])
+            cfg['for-leaf-applications'] = (cfg['for-leaf-applications'].split() if 'for-leaf-applications' in cfg else [])
+            if 'for-prefixes' not in cfg: cfg['for-prefixes'] = []
+            if 'for-suffixes' not in cfg: cfg['for-suffixes'] = []
+            auto_enable_cfg[mode] = cfg
 
     except Exception as e:
         print("\nerror loading config:", e)
@@ -254,9 +244,7 @@ def italic_types(pattern):
 
 @make_builtin('options')
 def cmd_options(_):
-    mm = [mode]
-    if mode != idle_mode:
-        mm += [m for m in modes if m != mode and mode_is_auto_enabled(m)]
+    mm = get_active_modes(mode)
     print()
     builtins_displayed = []
 
@@ -454,29 +442,24 @@ def occurs_as_leaf_in_branch(x, processes):
             return True
     return False
 
-def mode_is_auto_enabled(m):
-    if m == idle_mode: return True
-    if m in auto_enable_for_applications:
-        for app in auto_enable_for_applications[m]:
-            if occurs_in_branch(app, current_windowprocesses):
-                return True
-    if m in auto_enable_for_leaf_applications:
-        for app in auto_enable_for_leaf_applications[m]:
-            if occurs_as_leaf_in_branch(app, current_windowprocesses):
-                return True
-    if m in auto_enable_for_prefixes:
-        for prefix in auto_enable_for_prefixes[m]:
-            if current_windowtitle.startswith(prefix):
-                return True
-    if m in auto_enable_for_suffixes:
-        for suffix in auto_enable_for_suffixes[m]:
-            if current_windowtitle.endswith(suffix):
-                return True
+def mode_is_auto_enabled(current_mode, candidate):
+    c = auto_enable_cfg[current_mode]
+    if not c['other-modes']: return False
+
+    c = auto_enable_cfg[candidate]
+    if c['always']: return True
+    for app in c['for-applications']:
+        if occurs_in_branch(app, current_windowprocesses): return True
+    for app in c['for-leaf-applications']:
+        if occurs_as_leaf_in_branch(app, current_windowprocesses): return True
+    for prefix in c['for-prefixes']:
+        if current_windowtitle.startswith(prefix): return True
+    for suffix in c['for-suffixes']:
+        if current_windowtitle.endswith(suffix): return True
     return False
 
 def get_active_modes(mode):
-    if mode == idle_mode: return [mode]
-    return [m for m in modes if m == mode or mode_is_auto_enabled(m)]
+    return [m for m in modes if m == mode or mode_is_auto_enabled(mode, m)]
 
 def color_commands(p):
     return colored(p, 'magenta')
@@ -552,12 +535,9 @@ def quote_if_necessary(s):
     return (s if ' ' not in s else '"' + s + '"')
 
 def handle_alias(input, current_mode, include_autoenabled):
-    enabled_modes = [current_mode]
-    if include_autoenabled and current_mode != idle_mode:
-        enabled_modes += [m for m in modes if m != current_mode and mode_is_auto_enabled(m)]
-
+    enabled_modes = [m for m in modes
+        if m == current_mode or (include_autoenabled and mode_is_auto_enabled(current_mode, m))]
     patterns = [(pat, (m, exp)) for m in enabled_modes for pat, exp in modes[m].items()]
-
     r = ParseResult()
     r.new_mode = current_mode
 
@@ -698,7 +678,7 @@ def eval_command(words, line):
     if words == []: return
     if debug: print()
 
-    handle_builtins = (mode != idle_mode)
+    handle_builtins = auto_enable_cfg[mode]['built-ins']
     pr = process(words, mode, handle_builtins, True)
 
     c = confirm_input(words, pr, line)
@@ -879,7 +859,7 @@ def noalsaerr():
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
-@click.argument('mode', nargs=1, default=idle_mode)
+@click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
 def evc(debug, volume, mode, cmd):
     globals()['mode'] = mode
