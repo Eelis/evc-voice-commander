@@ -572,6 +572,7 @@ def handle_alias(input, current_mode, include_autoenabled):
         original_expansion = expansion
         nvars = [('windowpid', current_windowpid),
                   ('windowtitle', current_windowtitle),
+                  ('configdir', configdir),
                   ('*', ' '.join(input[:r.longest]))] + \
                 [(str(i), v) for i, v in enumerate(vars)]
         for varname, varvalue in nvars:
