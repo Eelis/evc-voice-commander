@@ -34,6 +34,7 @@ prompt = True
 color = True
 explicitly_autoenabled = []
 scriptvars = {}
+suggestion = None
 
 def colored(s, c):
     if not color: return s
@@ -801,12 +802,21 @@ def replace_words(words):
     return words
 
 def eval_command(words, line):
+    global suggestion
     if words == []: return
     if debug: print()
 
     handle_builtins = auto_enable_cfg[mode]['built-ins']
     pr = process(words, mode, handle_builtins, True)
     c = confirm_input(words, pr, line)
+
+    suggestion = None
+    if pr.missing != []:
+        uu = []
+        for m in pr.missing: uu += m.split('|')
+        if len(uu) == 1 and not uu[0].startswith('<'):
+            suggestion = uu[0]
+
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
@@ -852,6 +862,8 @@ async def process_lines(input):
                     words.pop(0)
                 if words != []:
                     if words[0] == 'continue': words = successful_input + words[1:]
+                    elif suggestion is not None and words == ['indeed']:
+                        words = successful_input + [suggestion]
                     longest = eval_command(words, line)
                     successful_input = words[:longest]
                     if prompt: print_prompt()
@@ -953,9 +965,12 @@ def confirm_input(words, pr, original_input):
     else:
         uu = []
         for m in pr.missing: uu += m.split('|')
-        what = ' or '.join(map(italic_types, list(set(uu))))
-        problem = ('missing' if n == len(words) else 'expected')
-        print(colored('error: ' + problem + ' ' + what, 'red'))
+        if len(uu) == 1 and not uu[0].startswith('<'):
+            print(colored("error: did you mean '" + uu[0] + "'?", 'red'))
+        else:
+            what = ' or '.join(map(italic_types, list(set(uu))))
+            problem = ('missing' if n == len(words) else 'expected')
+            print(colored('error: ' + problem + ' ' + what, 'red'))
 
     sound('good.wav', n)
     if n != len(words) or pr.missing != []:
