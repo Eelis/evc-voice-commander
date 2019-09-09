@@ -20,26 +20,26 @@ duration:
 <ext-mode>: <mode>|edit|web|mail|terminal|shell
 mode-map:
     mode <ext-mode>: builtin mode evaluate $1
-    ret <ext-mode>: builtin return $1
+    return <ext-mode>: builtin return $1
 
-    <mode>: ret $0
-    edit: ret vim
-    web: ret firefox
-    mail: ret thunderbird
-    terminal: ret urxvt
-    shell: ret zsh
+    <mode>: return $0
+    edit: return vim
+    web: return firefox
+    mail: return thunderbird
+    terminal: return urxvt
+    shell: return zsh
 
 # control structures
 
-control-structures ():
+control ():
     auto-enable: { always: True }
 
-    rep-impl <word> 0: builtin nop
-    rep-impl <word> <number>:
+    _rep-impl <word> 0: builtin nop
+    _rep-impl <word> <number>:
         $1
-        builtin mode control-structures
-        rep-impl "$1" evaluate builtin $2 minus 1
-    <number> times <command>: rep-impl "builtin mode $2 $3" $0
+        builtin mode control
+        _rep-impl "$1" evaluate builtin $2 minus 1
+    <number> times <command>: _rep-impl "builtin mode $2 $3" $0
 
 # main modes:
 
@@ -53,9 +53,8 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
     stop: builtin mode default
 
 computer (comp): # general commands
-    mode <ext-mode>: builtin mode mode-map mode $1
+    <ext-mode>: builtin mode mode-map mode $0
     print <word>/press <keys>: builtin $*
-    <ext-mode>: mode $0
     sleep seconds <number>: builtin execute "sleep $2"
     sleep <duration>: sleep seconds evaluate duration $1 in seconds
     in <duration> <command>: builtin asynchronously sleep $1 mode $2 $3
