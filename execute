@@ -326,8 +326,9 @@ def cmd_options(_):
 
 @make_builtin('text <word>')
 def cmd_text(_, s):
-    import pyautogui
-    pyautogui.press([c for c in s])
+    if not dryrun:
+        import pyautogui
+        pyautogui.press([c for c in s])
 
 @make_builtin('mode <mode>')
 def cmd_mode(_, new_mode):
