@@ -737,6 +737,7 @@ def eval_command(words, line):
     for f, w in pr.actions:
         f(*w)
     if c: clear_line()
+    return pr.longest
 
 async def process_lines(input):
     import asyncio
@@ -748,6 +749,8 @@ async def process_lines(input):
 
     if prompt: print_prompt()
     last_active_modes = get_active_modes(mode)
+
+    successful_input = []
 
     while True:
         try:
@@ -772,7 +775,9 @@ async def process_lines(input):
                 if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
                     words.pop(0)
                 if words != []:
-                    eval_command(words, line)
+                    if words[0] == 'continue': words = successful_input + words[1:]
+                    longest = eval_command(words, line)
+                    successful_input = words[:longest]
                     if prompt: print_prompt()
                     last_active_modes = get_active_modes(mode)
 
