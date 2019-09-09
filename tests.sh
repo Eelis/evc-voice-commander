@@ -61,3 +61,7 @@ t focus,edit,term left
 t computer focus lol
     #> error: expected command
     #> mode focus
+
+# equally long but faulty match in non-current mode:
+t edit-find,edit go
+    #> press enter, mode edit

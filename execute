@@ -547,16 +547,15 @@ def longest_matching_pattern(patterns, input, mode):
         for form in p.split('/'):
             params = form.split()
             matched, mis, v = params_matched(params, input, mode)
+
             if matched == longest:
-                if mis != []:
+                if mis != [] and missing != []:
                     missing += mis
                 elif missing != []:
                     missing = []
                     pattern = p
                     result = r
                     vars = v
-                elif mis != []:
-                    missing += mis
             elif matched > longest:
                 longest = matched
                 missing = mis
