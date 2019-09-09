@@ -55,7 +55,7 @@ extra_key_names = {
 short_mode_names = {}
 configdir = ''
 auto_enable_cfg = {}
-global_builtins = ['options', 'define', 'builtin', 'times']
+global_builtins = ['options', 'define', 'builtin']
     # this order is also used for display to humans
 
 def load_yaml(f):
@@ -363,8 +363,9 @@ def cmd_options(_):
                         simples.append(simple_pattern(alt))
                 else:
                     simples.append(simple_pattern(pat))
-            else:
-                l.append(command_pattern(pat))
+            elif not pat.startswith('_'):
+                for alt in pat.split('|'):
+                    l.append(command_pattern(alt))
         l += simples
         for pat, exp in modes[m].items():
             if pat in modes and pat != m and exp == 'builtin mode ' + pat:
