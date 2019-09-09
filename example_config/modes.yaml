@@ -36,11 +36,13 @@ computer (comp): # general commands
     new browser: builtin run firefox  firefox
     new terminal: builtin run urxvt  terminal
     door: builtin run cctv
-    in new terminal run <word>: builtin run "urxvt -e $4"
-    in new shell run <word>: in new terminal run "zsh -c '$4'"
+    in new terminal run <words>: builtin run urxvt -e $4
+    in new shell run <words>: in new terminal run zsh -c $4
+    in background shell run <words>: builtin run zsh -c $4
     calendar: in new shell run "cal; sleep 1000"
     job tree: in new shell run "ps fax|less"
     live jobs: in new shell run top
+    say <words>: in background shell run "echo '(SayText \"$1\")' | festival"
 
 <screen>: chicago/washington/philadelphia
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm
@@ -75,10 +77,11 @@ focus: # wm commands
     new work space: press wmkey+w
 
 system: # evc commands
-    restart/shutdown/mode <mode>: builtin $*
-    computer: mode $0
+    restart/shutdown/jobs/mode <mode>: builtin $*
+    computer|system: mode $0
     change commands: computer in new shell run "vim '$configdir/modes.yaml'"
     change replacements: computer in new shell run "vim '$configdir/replacements.yaml'"
+    kill <job>: builtin cancel job $1
 
 # specific applications:
 
@@ -128,6 +131,7 @@ firefox:
 
 vim-find:
     slash|backspace: builtin press $0
+    text <word>/press <keys>: builtin $*
     go: builtin press enter  builtin mode vim
     escape: builtin press escape  builtin mode vim
     cancel: escape
@@ -143,10 +147,12 @@ vim:
     auto-enable: { for-applications: vim }
     press <keys>: builtin $*
     escape|delete|enter|<direction>: builtin press $0
+    page <vdir>: press page$1
     undo: press escape,u
     redo: press escape,ctrl+r
     save: press ctrl+s
     find: press escape,slash  builtin mode vim-find
+    delete word: builtin text dw
     <number> <direction>: builtin press $0*$1
     copy <number>: select $1  press ctrl+c
     paste <number>: go $1  press ctrl+v
@@ -250,7 +256,7 @@ calculate (calc):
 
 # mode map (lets you refer to modes by another name):
 
-<ext-mode>: <mode>|edit
+<ext-mode>: <mode>|edit|web|mail
 mode-map:
     mode <ext-mode>: builtin mode evaluate $1
     ret <ext-mode>: builtin return $1
@@ -262,7 +268,7 @@ mode-map:
 
 # control structures
 
-control-structures:
+control-structures ():
     auto-enable: { always: True }
 
     rep-impl <word> 0: builtin nop

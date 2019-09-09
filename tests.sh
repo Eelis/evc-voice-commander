@@ -36,7 +36,7 @@ t arith-demo fibonacci 7
 
 # run
 t computer calendar
-    #> run urxvt -e zsh -c 'cal; sleep 1000'
+    #> run urxvt -e zsh -c "cal; sleep 1000"
 
 # complex custom types (<target>)
 t focus change next work space
@@ -64,3 +64,7 @@ t calculate maximum of 2 and 9
     #> 9
 t calculate maximum of 9 and 2
     #> 9
+
+# quoting
+t computer say good morning
+    #> run zsh -c "echo '(SayText \"good morning\")' | festival"
