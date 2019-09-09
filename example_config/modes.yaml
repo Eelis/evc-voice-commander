@@ -57,7 +57,7 @@ computer (comp): # general commands
     print <word>/press <keys>: builtin $*
     sleep seconds <number>: builtin execute "sleep $2"
     sleep <duration>: sleep seconds evaluate duration $1 in seconds
-    in <duration> <command>: builtin asynchronously sleep $1 mode $2 $3
+    in <duration> <command>: builtin asynchronously sleep $1 $2 $3
     new browser: system simple run firefox mode firefox
     new terminal: system simple run urxvt mode urxvt
     door: builtin run cctv
