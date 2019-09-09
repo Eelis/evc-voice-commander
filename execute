@@ -339,6 +339,7 @@ def cmd_return(_, w):
 
 @make_builtin('press <keys>')
 def cmd_press(_, spec):
+    if dryrun: return
     import pyautogui
     for combo in spec.split(','):
         times = 1
