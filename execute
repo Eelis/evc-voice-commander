@@ -183,12 +183,39 @@ def cmd_set(_, var, val):
 def cmd_get(_, var):
     return scriptvars[var] if var in scriptvars else "undefined"
 
+jobs = {}
+next_job_nr = 0
+
+@make_builtin('jobs')
+def cmd_jobs(_):
+    if jobs == {}:
+        print('No active jobs.')
+        return
+    for n, cmd in jobs.items():
+        print(str(n) + ':', cmd)
+
+@make_builtin('cancel job <job>')
+def cmd_cancel_job(_cancel, _job, n):
+    n = int(n)
+    if n in jobs: del jobs[n]
+
 @make_builtin('asynchronously <command>')
 def cmd_asynchronously(_, mode, cmd):
+    global jobs, next_job_nr
     pr = process(split_expansion(cmd), mode)
+    n = next_job_nr
+    next_job_nr += 1
+    jobs[n] = cmd
     def f():
-        for act, w in pr.actions: act(*w)
-        print("finished:", colored(cmd, 'green'))
+        # todo: VERY EVIL unsafe concurrent access to 'jobs' below
+        status = 'finished'
+        for act, w in pr.actions:
+            if n not in jobs:
+                status = 'canceled'
+                break
+            act(*w)
+        if n in jobs: del jobs[n]
+        print(' ', status + ':', colored(cmd, 'green'))
         if prompt: print_prompt()
     threading.Thread(target=f).start()
 
@@ -392,6 +419,7 @@ def cmd_print(_, s):
 builtin_types = {
     'word': lambda _: True,
     'number': lambda s: s.isdigit(),
+    'job': lambda n: n.isdigit() and int(n) in jobs,
     'key': is_keyname,
     'keys': is_keyspec,
     'mode':
@@ -857,7 +885,7 @@ def clear_line():
 
 def prompt_string():
     mm = list(map(short_mode_name, get_active_modes(mode)))
-    if '' in mm: mm.remove('')
+    while '' in mm: mm.remove('')
     return ','.join(map(color_mode, mm)) + '> '
 
 def print_prompt():
