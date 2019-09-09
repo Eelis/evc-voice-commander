@@ -146,8 +146,9 @@ keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
 def is_keyname(s):
     return s in keynames or s in extra_key_names
 
+all_keys = keynames + list(extra_key_names.keys())
+
 def is_keyspec(spec):
-    all_keys = keynames + list(extra_key_names.keys())
     for combo in spec.split(','):
         mult = combo.find('*')
         if mult != -1:
@@ -582,8 +583,9 @@ def quote_if_necessary(s):
     return (s if ' ' not in s else '"' + s + '"')
 
 def handle_alias(input, current_mode, include_autoenabled):
-    enabled_modes = ([current_mode] + # important: current_mode comes first
-        [m for m in modes if m != current_mode and include_autoenabled and mode_is_auto_enabled(current_mode, m)])
+    enabled_modes = [current_mode] # important: current_mode comes first
+    if include_autoenabled:
+        enabled_modes += [m for m in modes if m != current_mode and mode_is_auto_enabled(current_mode, m)]
     patterns = [(pat, (m, exp)) for m in enabled_modes for pat, exp in modes[m].items()]
     r = ParseResult()
     r.new_mode = current_mode
