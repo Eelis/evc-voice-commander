@@ -32,6 +32,7 @@ dryrun = False
 prompt = True
 color = True
 explicitly_autoenabled = []
+scriptvars = {}
 
 def colored(s, c):
     if not color: return s
@@ -171,6 +172,15 @@ def make_functional_builtin(pattern):
         builtin_commands[pattern] = (g, None)
         return g
     return f
+
+@make_builtin('set <word> <word>')
+def cmd_set(_, var, val):
+    global scriptvars
+    scriptvars[var] = val
+
+@make_functional_builtin('get <word>')
+def cmd_get(_, var):
+    return scriptvars[var] if var in scriptvars else "undefined"
 
 @make_builtin('run <word>')
 def cmd_run(_, cmd):

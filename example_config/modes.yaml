@@ -253,6 +253,11 @@ calculate (calc):
     print <word>/return <word>/<number> plus|minus|times <number>: builtin $*
     <number> is less|greater than <number>: builtin $*
 
+    make <word> <word>: builtin set $1 $2
+    value of <word>: builtin get $2
+    increase <word> by <number>: make $1 evaluate $3 plus evaluate value of $1
+    increment <word>: increase $1 by 1
+
     <number> or <number> depending on whether true: return $0
     <number> or <number> depending on whether false: return $2
 
