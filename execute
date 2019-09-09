@@ -199,6 +199,10 @@ def cmd_cancel_job(_cancel, _job, n):
     n = int(n)
     if n in jobs: del jobs[n]
 
+@make_builtin('window processes')
+def cmd_window_processes(*_):
+    print_pstree(current_windowprocesses, 2)
+
 @make_builtin('asynchronously <command>')
 def cmd_asynchronously(_, mode, cmd):
     global jobs, next_job_nr
