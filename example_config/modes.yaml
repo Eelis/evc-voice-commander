@@ -65,31 +65,8 @@ focus: # wm commands
 system: # evc commands
     restart/shutdown/mode <mode>: builtin $*
     computer: mode $0
-    change commands: computer in new shell run "vim $configdir/modes.yaml"
-
-# mode map (lets you refer to modes by another name):
-
-<ext-mode>: <mode>|edit
-mode-map:
-    mode <ext-mode>: builtin mode evaluate $1
-    ret <ext-mode>: builtin return $1
-
-    <mode>: ret $0
-    edit: ret vim
-    web: ret firefox
-    mail: ret thunderbird
-
-# control structures
-
-control-structures:
-    auto-enable: { always: True }
-
-    rep-impl <word> 0: builtin nop
-    rep-impl <word> <number>:
-        $1
-        builtin mode control-structures
-        rep-impl "$1" evaluate builtin $2 minus 1
-    <number> times <command>: rep-impl "builtin mode $2 $3" $0
+    change commands: computer in new shell run "vim '$configdir/modes.yaml'"
+    change replacements: computer in new shell run "vim '$configdir/replacements.yaml'"
 
 # specific applications:
 
@@ -102,8 +79,7 @@ less:
     find: press slash
 
 thunderbird:
-    auto-enable:
-        for-applications: thunderbird
+    auto-enable: { for-applications: thunderbird }
     home|delete|escape|<vdir>: builtin press $0
     next: builtin press f
     select <number>: keydown shift  press $1*down,up  keyup shift
@@ -114,8 +90,7 @@ firefox-navigate:
     go: builtin press enter
 
 firefox:
-    auto-enable:
-        for-applications: firefox-bin
+    auto-enable: { for-applications: firefox-bin }
     press <keys>/text <word>: builtin $*
     home|escape|delete|<direction>|space: builtin press $0
     erase: press shift+home,delete
@@ -153,8 +128,7 @@ vim-insert:
     text <word>: builtin $*
 
 vim:
-    auto-enable:
-        for-applications: vim
+    auto-enable: { for-applications: vim }
     press <keys>: builtin $*
     escape|delete|enter|<direction>: builtin press $0
     undo: press escape,u
@@ -179,16 +153,14 @@ vim:
     insert: press insert  builtin mode vim-insert
 
 vlc:
-    auto-enable:
-        for-applications: vlc
+    auto-enable: { for-applications: vlc }
     maximize: press f
     kill: press wmkey+c
     mark: press wmkey+d  focus
     change <target>: focus change $1
 
 shell:
-    auto-enable:
-        for-leaf-applications: zsh
+    auto-enable: { for-leaf-applications: zsh }
     text <word>/press <keys>: builtin $*
     do it: press enter
     again: press up,enter
@@ -205,14 +177,12 @@ shell:
     erase: press ctrl+u
 
 terminal (term):
-    auto-enable:
-        for-applications: urxvt
+    auto-enable: { for-applications: urxvt }
     short-name: term
     press <keys>: builtin $*
 
 gitk:
-    auto-enable:
-        for-suffixes: ['- gitk']
+    auto-enable: { for-suffixes: ['- gitk'] }
     <direction>: builtin press $0
     <number> <direction>: press $0*$1
     change <target>: focus change $1
@@ -268,3 +238,27 @@ calculate (calc):
 
     <number> minutes: $0 times 60
     <number> hours: $0 times 3600
+
+# mode map (lets you refer to modes by another name):
+
+<ext-mode>: <mode>|edit
+mode-map:
+    mode <ext-mode>: builtin mode evaluate $1
+    ret <ext-mode>: builtin return $1
+
+    <mode>: ret $0
+    edit: ret vim
+    web: ret firefox
+    mail: ret thunderbird
+
+# control structures
+
+control-structures:
+    auto-enable: { always: True }
+
+    rep-impl <word> 0: builtin nop
+    rep-impl <word> <number>:
+        $1
+        builtin mode control-structures
+        rep-impl "$1" evaluate builtin $2 minus 1
+    <number> times <command>: rep-impl "builtin mode $2 $3" $0
