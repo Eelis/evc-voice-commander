@@ -5,6 +5,16 @@
 <direction>: <hdir>/<vdir>
 <nextprev>: next/previous
 
+<duration>:
+    - <number> seconds
+    - <number> minutes
+    - <number> hours
+
+duration:
+    <number> seconds in seconds: builtin return $0
+    <number> minutes in seconds: $0 times 60
+    <number> hours in seconds: $0 times 3600
+
 # main modes:
 
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
@@ -20,7 +30,9 @@ computer (comp): # general commands
     mode <ext-mode>: builtin mode mode-map mode $1
     print <word>/press <keys>: builtin $*
     <ext-mode>: mode $0
-    sleep <number>: builtin execute "$*"
+    sleep seconds <number>: builtin execute "sleep $2"
+    sleep <duration>: sleep seconds evaluate duration $1 in seconds
+    in <duration> <command>: builtin asynchronously sleep $1 mode $2 $3
     new browser: builtin run firefox  firefox
     new terminal: builtin run urxvt  terminal
     door: builtin run cctv
@@ -235,9 +247,6 @@ calculate (calc):
         $4 or $2 depending on whether evaluate $2 is less than $4
     minimum of <number> and <number>:
         $2 or $4 depending on whether evaluate $2 is less than $4
-
-    <number> minutes: $0 times 60
-    <number> hours: $0 times 3600
 
 # mode map (lets you refer to modes by another name):
 
