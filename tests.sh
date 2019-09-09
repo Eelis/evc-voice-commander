@@ -30,21 +30,9 @@ t computer 3 times print hello
     #> hello
     #> hello
 
-# 'return' builtin
-t computer builtin return 3
-    #> 3
-
-# 'evaluate'
-t computer builtin return evaluate builtin return 5
-    #> 5
-
 # arithmetic
-t calculate 4 plus 2
-    #> 6
-
-# nested arithmetic with 'evaluate'
-t calculate 2 plus evaluate 3 times 4
-    #> 14
+t arith-demo fibonacci 7
+    #> 13
 
 # run
 t computer calendar
@@ -70,3 +58,9 @@ t vim-find,vim go
 # routing through mode map
 t computer edit insert text bla escape
     #> mode mode-map, mode vim, press insert, mode vim-insert, text bla, press escape, mode vim
+
+# conditionals
+t calculate maximum of 2 and 9
+    #> 9
+t calculate maximum of 9 and 2
+    #> 9

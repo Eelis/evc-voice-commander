@@ -226,6 +226,14 @@ def cmd_minus(x, _p, y):
 def num_times_num(x, _p, y):
     return int(x) * int(y)
 
+@make_functional_builtin('<number> is less than <number>')
+def cmd_less_than(x, _is, _less, _than, y):
+    return "true" if int(x) < int(y) else "false"
+
+@make_functional_builtin('<number> is greater than <number>')
+def cmd_less_than(x, _is, _greater_, _than, y):
+    return "true" if int(x) > int(y) else "false"
+
 @make_functional_builtin('enumindex <word> <word>')
 def cmd_enumindex(_, e, v):
     l = enums[e].split('/')

@@ -219,5 +219,47 @@ gitk:
     kill: builtin press ctrl+q
     finish: kill
 
+arith-demo:
+    print <word>/return <word>: builtin $*
+    # here, just for fun, we build arithmetic from +1 and -1.
+    # this is currently too slow to be useful though, so elsewhere
+    # we use built-ins.
+
+    increment <number>: builtin $1 plus 1
+    decrement <number>: builtin $1 minus 1
+
+    <number> minus 0: return $0
+    0 minus <number>: return 0
+    <number> minus <number>: decrement evaluate $0 minus evaluate decrement $2
+
+    <number> plus 0: return $0
+    0 plus <number>: return $2
+    <number> plus <number>: increment evaluate $0 plus evaluate decrement $2
+
+    0 times <number>: return 0
+    <number> times <number>: $2 plus evaluate $2 times evaluate decrement $0
+
+    <number> is less than 0: return false
+    0 is less than <number>: return true
+    <number> is less than <number>: lth $4 evaluate decrement $0
+    lth <number> <number>: $2 is less than evaluate decrement $1
+
+    fibonacci 0: return 0
+    fibonacci 1: return 1
+    fibhalf <number> <number>: $2 plus evaluate fibonacci evaluate $1 minus 2
+    fibonacci <number>: fibhalf $1 evaluate fibonacci evaluate $1 minus 1
+
 calculate (calc):
-    <number> plus|times|minus <number>/print <word>: builtin $*
+    print <word>/return <word>/<number> plus|minus|times <number>: builtin $*
+    <number> is less|greater than <number>: builtin $*
+
+    <number> or <number> depending on whether true: return $0
+    <number> or <number> depending on whether false: return $2
+
+    maximum of <number> and <number>:
+        $4 or $2 depending on whether evaluate $2 is less than $4
+    minimum of <number> and <number>:
+        $2 or $4 depending on whether evaluate $2 is less than $4
+
+    <number> minutes: $0 times 60
+    <number> hours: $0 times 3600
