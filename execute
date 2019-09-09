@@ -651,7 +651,7 @@ def handle_builtin_command(input, mode, only_global=True):
             f, act = x
             if f is not None: r.retval = f(*vars)
             if act is not None: r.actions = [(act, vars)]
-            if pattern == 'mode <mode>': r.new_mode = input[1]
+            if pattern == 'mode <mode>': r.new_mode = vars[1]
                 # this applies the mode switch /during/ command evaluation,
                 # which is beyond the capabilities of regular built-ins,
                 # since those only produce actions to be executed later.
