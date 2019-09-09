@@ -5,18 +5,6 @@
 <direction>: <hdir>/<vdir>
 <nextprev>: next/previous
 
-# mode map (lets you refer to modes by another name):
-
-<ext-mode>: <mode>|edit
-mode-map:
-    mode <ext-mode>: builtin mode evaluate $1
-    ret <ext-mode>: builtin return $1
-
-    <mode>: ret $0
-    edit: ret vim
-    web: ret firefox
-    mail: ret thunderbird
-
 # main modes:
 
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
@@ -79,11 +67,35 @@ system: # evc commands
     computer: mode $0
     change commands: computer in new shell run "vim $configdir/modes.yaml"
 
+# mode map (lets you refer to modes by another name):
+
+<ext-mode>: <mode>|edit
+mode-map:
+    mode <ext-mode>: builtin mode evaluate $1
+    ret <ext-mode>: builtin return $1
+
+    <mode>: ret $0
+    edit: ret vim
+    web: ret firefox
+    mail: ret thunderbird
+
+# control structures
+
+control-structures:
+    auto-enable: { always: True }
+
+    rep-impl <word> 0: builtin nop
+    rep-impl <word> <number>:
+        $1
+        builtin mode control-structures
+        rep-impl "$1" evaluate builtin $2 minus 1
+    <number> times <command>: rep-impl "builtin mode $2 $3" $0
+
 # specific applications:
 
 less:
-    auto-enable:
-        for-applications: less
+    auto-enable: { for-applications: less }
+
     press <keys>: builtin $*
     page <vdir>: press page$1
     finish: press q

@@ -25,6 +25,7 @@ t computer print hello
 
 # repetition
 t computer 3 times print hello
+    #> mode computer, print hello, mode control-structures, mode computer, print hello, mode control-structures, mode computer, print hello, mode control-structures, nop
     #> hello
     #> hello
     #> hello
