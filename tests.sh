@@ -54,14 +54,18 @@ t focus change next work space
     #> press wmkey+d, press wmkey+pagedown, press wmkey+a
 
 # current mode overrides auto-enabled modes
-t focus,edit,term left
+t focus,vim,term left
     #> press wmkey+left
 
 # diagnostic for bad command
 t computer focus lol
     #> error: expected command
-    #> mode focus
+    #> mode mode-map, mode focus
 
 # equally long but faulty match in non-current mode:
-t edit-find,edit go
-    #> press enter, mode edit
+t vim-find,vim go
+    #> press enter, mode vim
+
+# routing through mode map
+t computer edit insert text bla escape
+    #> mode mode-map, mode vim, press insert, mode vim-insert, text bla, press escape, mode vim

@@ -5,6 +5,18 @@
 <direction>: <hdir>/<vdir>
 <nextprev>: next/previous
 
+# mode map (lets you refer to modes by another name):
+
+<ext-mode>: <mode>|edit
+mode-map:
+    mode <ext-mode>: builtin mode evaluate $1
+    ret <ext-mode>: builtin return $1
+
+    <mode>: ret $0
+    edit: ret vim
+    web: ret firefox
+    mail: ret thunderbird
+
 # main modes:
 
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
@@ -17,10 +29,11 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
     stop: builtin mode default
 
 computer (comp): # general commands
-    mode <mode>/print <word>/press <keys>: builtin $*
-    <mode>: mode $0
+    mode <ext-mode>: builtin mode mode-map mode $1
+    print <word>/press <keys>: builtin $*
+    <ext-mode>: mode $0
     sleep <number>: builtin execute "$*"
-    new browser: builtin run firefox  web
+    new browser: builtin run firefox  firefox
     new terminal: builtin run urxvt  terminal
     door: builtin run cctv
     in new terminal run <word>: builtin run "urxvt -e $4"
@@ -76,7 +89,7 @@ less:
     finish: press q
     find: press slash
 
-mail:
+thunderbird:
     auto-enable:
         for-applications: thunderbird
     home|delete|escape|<vdir>: builtin press $0
@@ -84,11 +97,11 @@ mail:
     select <number>: keydown shift  press $1*down,up  keyup shift
     <number> <direction>: builtin press $0*$1
 
-web-navigate:
-    <number>: builtin text $0  builtin mode web
+firefox-navigate:
+    <number>: builtin text $0  builtin mode firefox
     go: builtin press enter
 
-web:
+firefox:
     auto-enable:
         for-applications: firefox-bin
     press <keys>/text <word>: builtin $*
@@ -100,7 +113,7 @@ web:
     find <word>: press ctrl+f  text $1
     back: press backspace
     location: press f6
-    go: press escape,f  builtin mode web-navigate
+    go: press escape,f  builtin mode firefox-navigate
     refresh: press f5
     fresh: press f5
     forward: todo
@@ -114,21 +127,20 @@ web:
     previous: builtin press ctrl+pageup
     next: builtin press ctrl+pagedown
 
-edit-find:
+vim-find:
     slash|backspace: builtin press $0
-    go: builtin press enter  builtin mode edit
-    escape: builtin press escape  builtin mode edit
+    go: builtin press enter  builtin mode vim
+    escape: builtin press escape  builtin mode vim
     cancel: escape
-    edit: escape
     delete word: builtin press ctrl+w
 
-edit-insert:
+vim-insert:
     slash|space|semicolon|backspace|period|dollar|percent: builtin press $0
-    escape: builtin press escape  builtin mode edit
+    escape: builtin press escape  builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
     text <word>: builtin $*
 
-edit:
+vim:
     auto-enable:
         for-applications: vim
     press <keys>: builtin $*
@@ -136,7 +148,7 @@ edit:
     undo: press escape,u
     redo: press escape,ctrl+r
     save: press ctrl+s
-    find: press escape,slash  builtin mode edit-find
+    find: press escape,slash  builtin mode vim-find
     <number> <direction>: builtin press $0*$1
     copy <number>: select $1  press ctrl+c
     paste <number>: go $1  press ctrl+v
@@ -152,7 +164,7 @@ edit:
     previous match: escape  press shift+n
     finish: escape  builtin keydown shift  builtin text zz  builtin keyup shift
     refresh: press ctrl+l
-    insert: press insert  builtin mode edit-insert
+    insert: press insert  builtin mode vim-insert
 
 vlc:
     auto-enable:
