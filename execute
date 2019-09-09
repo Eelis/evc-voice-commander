@@ -918,8 +918,12 @@ def clear_line():
     sys.stdout.flush()
 
 def prompt_string():
-    mm = list(map(short_mode_name, get_active_modes(mode)))
-    while '' in mm: mm.remove('')
+    current, *auto = get_active_modes(mode)
+    short_current = short_mode_name(current)
+    mm = []
+    if short_current != '': mm = [short_current]
+    elif auto != []: mm = [current]
+    mm += [s for s in list(map(short_mode_name, auto)) if s != '']
     return ','.join(map(color_mode, mm)) + '> '
 
 def print_prompt():
