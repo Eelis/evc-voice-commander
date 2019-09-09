@@ -15,6 +15,32 @@ duration:
     <number> minutes in seconds: $0 times 60
     <number> hours in seconds: $0 times 3600
 
+# mode map (lets you refer to modes by another name):
+
+<ext-mode>: <mode>|edit|web|mail|terminal|shell
+mode-map:
+    mode <ext-mode>: builtin mode evaluate $1
+    ret <ext-mode>: builtin return $1
+
+    <mode>: ret $0
+    edit: ret vim
+    web: ret firefox
+    mail: ret thunderbird
+    terminal: ret urxvt
+    shell: ret zsh
+
+# control structures
+
+control-structures ():
+    auto-enable: { always: True }
+
+    rep-impl <word> 0: builtin nop
+    rep-impl <word> <number>:
+        $1
+        builtin mode control-structures
+        rep-impl "$1" evaluate builtin $2 minus 1
+    <number> times <command>: rep-impl "builtin mode $2 $3" $0
+
 # main modes:
 
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
@@ -33,8 +59,8 @@ computer (comp): # general commands
     sleep seconds <number>: builtin execute "sleep $2"
     sleep <duration>: sleep seconds evaluate duration $1 in seconds
     in <duration> <command>: builtin asynchronously sleep $1 mode $2 $3
-    new browser: builtin run firefox  firefox
-    new terminal: builtin run urxvt  terminal
+    new browser: system simple run firefox mode firefox
+    new terminal: system simple run urxvt mode urxvt
     door: builtin run cctv
     in new terminal run <words>: builtin run urxvt -e $4
     in new shell run <words>: in new terminal run zsh -c $4
@@ -76,18 +102,25 @@ focus: # wm commands
     previous work space: press wmkey+pageup
     new work space: press wmkey+w
 
-system: # evc commands
-    restart/shutdown/jobs/mode <mode>: builtin $*
+# evc utilities:
+
+system:
+    restart/shutdown/jobs/mode <mode>/window processes: builtin $*
     computer|system: mode $0
     change commands: computer in new shell run "vim '$configdir/modes.yaml'"
     change replacements: computer in new shell run "vim '$configdir/replacements.yaml'"
     kill <job>: builtin cancel job $1
+    simple run <word>: builtin run $2 # only consumes one argument, so can be followed by more commands
 
 # specific applications:
 
+top:
+    auto-enable: { for-applications: top }
+    press <keys>: builtin $*
+    finish: press q
+
 less:
     auto-enable: { for-applications: less }
-
     press <keys>: builtin $*
     page <vdir>: press page$1
     finish: press q
@@ -177,7 +210,7 @@ vlc:
     mark: press wmkey+d  focus
     change <target>: focus change $1
 
-shell:
+zsh:
     auto-enable: { for-leaf-applications: zsh }
     text <word>/press <keys>: builtin $*
     do it: press enter
@@ -194,9 +227,8 @@ shell:
     <direction>|space: builtin press $0
     erase: press ctrl+u
 
-terminal (term):
+urxvt:
     auto-enable: { for-applications: urxvt }
-    short-name: term
     press <keys>: builtin $*
 
 gitk:
@@ -253,27 +285,3 @@ calculate (calc):
         $4 or $2 depending on whether evaluate $2 is less than $4
     minimum of <number> and <number>:
         $2 or $4 depending on whether evaluate $2 is less than $4
-
-# mode map (lets you refer to modes by another name):
-
-<ext-mode>: <mode>|edit|web|mail
-mode-map:
-    mode <ext-mode>: builtin mode evaluate $1
-    ret <ext-mode>: builtin return $1
-
-    <mode>: ret $0
-    edit: ret vim
-    web: ret firefox
-    mail: ret thunderbird
-
-# control structures
-
-control-structures ():
-    auto-enable: { always: True }
-
-    rep-impl <word> 0: builtin nop
-    rep-impl <word> <number>:
-        $1
-        builtin mode control-structures
-        rep-impl "$1" evaluate builtin $2 minus 1
-    <number> times <command>: rep-impl "builtin mode $2 $3" $0
