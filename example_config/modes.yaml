@@ -33,13 +33,10 @@ mode-map:
 
 control ():
     auto-enable: { always: True }
-
-    _rep-impl <word> 0: builtin nop
-    _rep-impl <word> <number>:
-        $1
-        builtin mode control
-        _rep-impl "$1" evaluate builtin $2 minus 1
-    <number> times <command>: _rep-impl "builtin mode $2 $3" $0
+    _rep-impl-f <word> 0: builtin nop
+    _rep-impl-g <word> <number>: _rep-impl-f "$1" evaluate builtin $2 minus 1
+    _rep-impl-f <word> <number>: _rep-impl-g "$1" $2 $1
+    <number> times <command>: _rep-impl-f "builtin mode $2 $3" $0
 
 # main modes:
 
@@ -63,11 +60,11 @@ computer (comp): # general commands
     door: builtin run cctv
     in new terminal run <words>: builtin run urxvt -e $4
     in new shell run <words>: in new terminal run zsh -c $4
-    in background shell run <words>: builtin run zsh -c $4
+    in background shell run|execute <words>: builtin $3 zsh -c $4
     calendar: in new shell run "cal; sleep 1000"
     job tree: in new shell run "ps fax|less"
     live jobs: in new shell run top
-    say <words>: in background shell run "echo '(SayText \"$1\")' | festival"
+    say <words>: in background shell execute "echo '(SayText \"$1\")' | festival"
 
 <screen>: chicago/washington/philadelphia
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm

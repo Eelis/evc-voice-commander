@@ -10,9 +10,6 @@ asr:
 - use a custom dictionary with added/removed words
 - try using our command structure to guide kaldi
 
-output:
-- add TTS
-
 command handling:
 - run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
 - properly diagnose bad variable references

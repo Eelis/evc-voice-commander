@@ -19,13 +19,9 @@ function t() {
 
 ########################### TEST CASES: ###########################
 
-# simple printing
-t computer print hello
-    #> hello
-
 # repetition
 t computer 3 times print hello
-    #> mode computer, print hello, mode control, mode computer, print hello, mode control, mode computer, print hello, mode control, nop
+    #> nop, mode computer, print hello, mode computer, print hello, mode computer, print hello
     #> hello
     #> hello
     #> hello
@@ -67,4 +63,7 @@ t calculate maximum of 9 and 2
 
 # quoting
 t computer say good morning
-    #> run zsh -c "echo '(SayText \"good morning\")' | festival"
+    #> execute zsh -c "echo '(SayText \"good morning\")' | festival"
+
+t computer 3 times say hello
+    #> nop, mode computer, execute zsh -c "echo '(SayText \"hello\")' | festival", mode computer, execute zsh -c "echo '(SayText \"hello\")' | festival", mode computer, execute zsh -c "echo '(SayText \"hello\")' | festival"
