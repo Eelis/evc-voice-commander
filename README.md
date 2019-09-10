@@ -1,8 +1,8 @@
 # EVC Voice Commander
 
-## 1. Introduction
-
 EVC is a tool for controlling a computer by speaking commands to it.
+
+## 1. Features
 
 Features:
 
@@ -16,9 +16,22 @@ Features:
 - command line prompt for visual and audio feedback (TODO: screenshot)
 - command groups for applications auto-enabled based on process name or window title
 
+## 2. Installation
 
-## 2. Usage:
+Installing prerequisites on Ubuntu:
+
+    sudo apt install docker.io python3-click python3-termcolor python3-pygame libasound2-dev
+
+Build the Kaldi ASR docker image (this can take half an hour, as it involves building Kaldi from source):
+
+    ./build-kaldi.sh
+
+## 3. Configuration
 
     mkdir ~/.evc-voice-commander
     cp example_config/* ~/.evc-voice-commander/
+    vim ~/.evc-voice-commander/modes.yaml
+
+## 4. Usage:
+
     ./evc-voice-commander

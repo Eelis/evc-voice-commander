@@ -1,4 +1,3 @@
 #!/bin/bash
 set -e
-docker build --quiet -t kaldiasr -f Dockerfile-kaldi . > /dev/null
 docker run --rm --interactive --shm-size=256m kaldiasr 2> /dev/null
