@@ -20,7 +20,8 @@ Features:
 
 Installing prerequisites on Ubuntu:
 
-    sudo apt install docker.io python3-click python3-termcolor python3-pygame libasound2-dev python3-pyaudio
+    sudo apt install docker.io python3-click python3-termcolor python3-pygame libasound2-dev \
+                     python3-pyaudio python3-dev python3-tk python3-psutil xdotool
 
 Build the Kaldi ASR docker image (this can take half an hour, as it involves building Kaldi from source):
 
