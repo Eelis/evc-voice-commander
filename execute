@@ -822,8 +822,13 @@ def eval_command(words, line):
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
         print(', '.join(actnames))
-    for f, w in pr.actions:
-        f(*w)
+
+    try:
+        for f, w in pr.actions:
+            f(*w)
+    except Exception as e:
+        print(colored(' '.join(w) + ": " + str(e), 'red'))
+
     if c: clear_line()
     return pr.longest
 
