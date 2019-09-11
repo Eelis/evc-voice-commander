@@ -941,33 +941,35 @@ def truncate(s, n):
 
 def confirm_input(words, pr, original_input):
     n = pr.longest
+    cols = shutil.get_terminal_size().columns
+    prp = prompt_string()
+    printed = ''
     if n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit()):
         clear_line()
-        prp = prompt_string()
-        cols = shutil.get_terminal_size().columns
-        print(prp, end='')
-        print(colored(truncate(original_input, cols - len(strip_markup(prp))), 'yellow'), end='\r')
+        print(prp + colored(truncate(original_input, cols - len(strip_markup(prp))), 'yellow'), end='\r')
         sys.stdout.flush()
         return False
     if prompt:
         clear_line()
-        print_prompt()
-        print(colored(' '.join(words[:n]), 'green'), end='')
+        printed = prp + colored(' '.join(words[:n]), 'green')
+        print(printed, end='')
     if pr.error is not None:
         print(pr.error)
         sound('good.wav', n)
         sound('bad.wav', 1, wait=False)
         return False
 
-    if n != len(words):
-        if prompt:
-            if n != 0: print(' ', end='')
-            print(colored(' '.join(words[n:]), 'red'), end='')
-    elif pr.missing != []:
-        # if all words were consumed but evaluation still went bad,
-        # it means additional input was missing
-        if prompt: print(colored(' ???', 'red'), end='')
     if prompt:
+        if n != len(words):
+            if n != 0:
+                print(' ', end='')
+                printed += ' '
+            avail = cols - len(strip_markup(printed))
+            print(colored(truncate(' '.join(words[n:]), avail), 'red'), end='')
+        elif pr.missing != []:
+            # if all words were consumed but evaluation still went bad,
+            # it means additional input was missing
+            print(colored(' ???', 'red'), end='')
         print()
 
     if pr.missing == []:
