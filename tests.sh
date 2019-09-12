@@ -32,7 +32,7 @@ t arith-demo fibonacci 7
 
 # run
 t computer calendar
-    #> run urxvt -e zsh -c "cal; sleep 1000"
+    #> run urxvt -e zsh --interactive -c "cal; sleep 1000"
 
 # complex custom types (<target>)
 t focus change next work space
