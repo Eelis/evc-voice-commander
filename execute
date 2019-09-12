@@ -46,6 +46,8 @@ extra_key_names = {
     'dollar': '$',
     'ampersand': '&',
     'hash': '#',
+    'colon': ':',
+    'semicolon': ';',
     'percent': '%',
     'period': '.',
     'comma': ',',
