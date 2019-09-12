@@ -24,6 +24,7 @@ modes = {}
 numbers = {}
 word_replacements = {}
 enums = {}
+completions = {}
 ignore = ["i", "of", "the", "if"]
 current_windowpid = ''
 current_windowtitle = ''
@@ -34,7 +35,7 @@ prompt = True
 color = True
 explicitly_autoenabled = []
 scriptvars = {}
-suggestion = None
+suggestions = []
 
 def colored(s, c):
     if not color: return s
@@ -63,7 +64,7 @@ def load_yaml(f):
         return yaml.load(stream, yaml.CLoader)
 
 def load_config():
-    global word_replacements, numbers, modes, enums, short_mode_names, auto_enable_cfg
+    global word_replacements, numbers, modes, enums, completions, short_mode_names, auto_enable_cfg
     short_mode_names = {}
     auto_enable_cfg = {}
     try:
@@ -73,9 +74,14 @@ def load_config():
 
         # handle enums:
         enums = {}
+        completions = {}
         for key, v in modes.items():
             if key.startswith('<'):
                 n = key[1:-1]
+                if type(v) is dict:
+                    if 'completions' in v:
+                        completions[n] = v['completions']
+                    v = v['forms']
                 if type(v) is list: v = '/'.join(v)
                 enums[n] = v
         for e in enums:
@@ -365,8 +371,12 @@ def cmd_options(_):
                 else:
                     simples.append(simple_pattern(pat))
             elif not pat.startswith('_'):
-                for alt in pat.split('|'):
-                    l.append(command_pattern(alt))
+                for form in pat.split('/'):
+                    if ' ' in form:
+                        l.append(command_pattern(form))
+                    else:
+                        for alt in form.split('|'):
+                            l.append(command_pattern(alt))
         l += simples
         for pat, exp in modes[m].items():
             if pat in modes and pat != m and exp == 'builtin mode ' + pat:
@@ -804,20 +814,31 @@ def replace_words(words):
     return words
 
 def eval_command(words, line):
-    global suggestion
+    global suggestions
     if words == []: return
     if debug: print()
 
     handle_builtins = auto_enable_cfg[mode]['built-ins']
     pr = process(words, mode, handle_builtins, True)
-    c = confirm_input(words, pr, line)
 
-    suggestion = None
-    if pr.missing != []:
-        uu = []
-        for m in pr.missing: uu += m.split('|')
-        if len(uu) == 1 and not uu[0].startswith('<'):
-            suggestion = uu[0]
+    if pr.longest != 0:
+        suggestions = []
+        if pr.missing != []:
+            uu = []
+            for m in pr.missing:
+                for u in m.split('|'):
+                    if u.startswith('<'):
+                        type = u[1:-1]
+                        if type in completions:
+                            cmd = completions[type]
+                            suggestions += subprocess.Popen(cmd, shell=True,
+                                stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
+                    else:
+                        suggestions.append(u)
+
+    c = confirm_input(words, pr, line)
 
     actnames = [' '.join(w) for _, w in pr.actions]
     if actnames != [] and ' '.join(actnames) != ' '.join(words):
@@ -869,10 +890,15 @@ async def process_lines(input):
                     words.pop(0)
                 if words != []:
                     if words[0] == 'continue': words = successful_input + words[1:]
-                    elif suggestion is not None and words == ['indeed']:
-                        words = successful_input + [suggestion]
+                    elif len(suggestions) == 1 and words == ['indeed']:
+                        words = successful_input + [suggestions[0]]
+                    elif suggestions != [] and len(words) == 2 and words[0] == 'indeed' and words[1].isdigit():
+                        i = int(words[1])
+                        if i < len(suggestions):
+                            words = successful_input + [suggestions[i]]
                     longest = eval_command(words, line)
-                    successful_input = words[:longest]
+                    if longest != 0:
+                        successful_input = words[:longest]
                     if prompt: print_prompt()
                     last_active_modes = get_active_modes(mode)
 
@@ -976,12 +1002,16 @@ def confirm_input(words, pr, original_input):
         if pr.retval is not None:
             print(colored(str(pr.retval), 'magenta'))
     else:
-        uu = []
-        for m in pr.missing: uu += m.split('|')
-        if len(uu) == 1 and not uu[0].startswith('<'):
-            print(colored("error: did you mean '" + uu[0] + "'?", 'red'))
+        if suggestions != []:
+            if len(suggestions) == 1 and not suggestions[0].startswith('<'):
+                print(colored("error: did you mean '" + suggestions[0] + "'?", 'red'))
+            else:
+                print(colored("did you perhaps mean:", 'red'))
+                rows = shutil.get_terminal_size().lines
+                for i, s in enumerate(suggestions[:rows - 3]):
+                    print('-', s + '?', '(' + str(i) + ')')
         else:
-            what = ' or '.join(map(italic_types, list(set(uu))))
+            what = ' or '.join(map(italic_types, list(set(pr.missing))))
             problem = ('missing' if n == len(words) else 'expected')
             print(colored('error: ' + problem + ' ' + what, 'red'))
 
