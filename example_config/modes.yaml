@@ -18,7 +18,7 @@ duration:
 
 # mode map (lets you refer to modes by another name):
 
-<ext-mode>: <mode>|edit|web|mail|terminal|shell
+<ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster
 mode-map:
     mode <ext-mode>: builtin mode evaluate $1
     return <ext-mode>: builtin return $1
@@ -29,6 +29,7 @@ mode-map:
     mail: return thunderbird
     terminal: return urxvt
     shell: return zsh
+    cluster: return kubectl
 
 # control structures
 
@@ -58,9 +59,10 @@ computer (comp): # general commands
     in <duration> <command>: builtin asynchronously sleep $1 $2 $3
     new browser: system simple run firefox mode firefox
     new terminal: system simple run urxvt mode urxvt
+    screen grab: builtin run flameshot gui
     door: builtin run cctv
     in new terminal run <words>: builtin run urxvt -e $4
-    in new shell run <words>: in new terminal run zsh -c $4
+    in new shell run <words>: in new terminal run zsh --interactive -c $4
     in background shell run|execute <words>: builtin $3 zsh -c $4
     calendar: in new shell run "cal; sleep 1000"
     job tree: in new shell run "ps fax|less"
@@ -168,20 +170,23 @@ vim-find:
     delete word: builtin press ctrl+w
 
 vim-insert:
-    slash|space|semicolon|backspace|period|dollar|percent: builtin press $0
+    slash|space|semicolon|backspace|period|dollar|percent|colon: builtin press $0
     escape: builtin press escape  builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
     text <word>: builtin $*
 
 vim:
     auto-enable: { for-applications: vim }
+    submode <word>: builtin mode vim-$1
     press <keys>: builtin $*
     escape|delete|enter|<direction>: builtin press $0
     page <vdir>: press page$1
     undo: press escape,u
+    sorry: undo
     redo: press escape,ctrl+r
     save: press ctrl+s
-    find: press escape,slash  builtin mode vim-find
+    find <word>: press escape,slash builtin text $1 submode find
+    find: press escape,slash submode find
     delete word: builtin text dw
     <number> <direction>: builtin press $0*$1
     copy <number>: select $1  press ctrl+c
@@ -191,6 +196,9 @@ vim:
     end of file: press escape,shift+g
     start of line: press home
     end of line: press end
+    next word: press w
+    previous word: press b
+    new line: press o  submode insert
     go <number>: escape  builtin text $1  press shift+g
     next buffer: escape  press ctrl+end
     previous buffer: escape  press ctrl+home
@@ -198,7 +206,7 @@ vim:
     previous match: escape  press shift+n
     finish: escape  builtin keydown shift  builtin text zz  builtin keyup shift
     refresh: press ctrl+l
-    insert: press insert  builtin mode vim-insert
+    insert: press insert  submode insert
 
 vlc:
     auto-enable: { for-applications: vlc }
@@ -235,6 +243,36 @@ gitk:
     change <target>: focus change $1
     kill: builtin press ctrl+q
     finish: kill
+
+<kube-obj-type>: pod|node|service|deployment
+
+<kubeobjs>: pods|nodes|services|deployments
+
+<kube-deployment>:
+    forms: <word>
+    completions: kubectl get deployments -o custom-columns=name:metadata.name --no-headers=true
+
+<kube-service>:
+    forms: <word>
+    completions: kubectl get services -o custom-columns=name:metadata.name --no-headers=true
+
+<kube-node>:
+    forms: <word>
+    completions: kubectl get nodes -o custom-columns=name:metadata.name --no-headers=true
+
+<kube-pod>:
+    forms: <word>
+    completions: kubectl get pods -o custom-columns=name:metadata.name --no-headers=true
+
+<kube-object>:
+    - node <kube-node>
+    - service <kube-service>
+    - pod <kube-pod>
+    - deployment <kube-deployment>
+
+kubectl:
+    computer: builtin mode $0
+    get|describe|delete <kube-object>: computer in new shell run "unset LESS; kubectl $0 $1 $2 | less"
 
 arith-demo:
     print <word>/return <word>: builtin $*
