@@ -20,19 +20,6 @@ class ParseResult():
             self.error = other.error
             self.retval = other.retval
 
-
-def escape(s):
-    x = ''
-    for c in s:
-        if c == '"': x += '\\"'
-        elif c == '\\': x += '\\\\'
-        else: x += c
-    return x
-
-def quote_if_necessary(s):
-    if ' ' not in s and '"' not in s: return s
-    return '"' + escape(s) + '"'
-
 global_builtins = ['options', 'define', 'builtin']
 
 def is_global_builtin_pattern(pat):
@@ -101,7 +88,7 @@ class EclContext():
                     '  ' + self.alias_definition_str(m, pattern, 4) + '\n'
 
         nvars = self.script_vars.copy()
-        nvars['*'] = ' '.join(map(quote_if_necessary, vars[:r.longest]))
+        nvars['*'] = ' '.join(map(util.quote_if_necessary, vars[:r.longest]))
         for i, v in enumerate(vars):
             nvars[str(i)] = v
 
@@ -121,7 +108,7 @@ class EclContext():
                 if varname not in nvars:
                     r.error = errorpart + self.colored('undefined variable $' + varname, 'red')
                     return r
-                replaced += (escape(nvars[varname]) if quoted else nvars[varname])
+                replaced += (util.escape(nvars[varname]) if quoted else nvars[varname])
             else:
                 replaced += expansion[0]
                 expansion = expansion[1:]
@@ -137,7 +124,7 @@ class EclContext():
             if sub.error is not None:
                 r.error = errorpart + sub.error
         else:
-            qexp = list(map(quote_if_necessary, exp))
+            qexp = list(map(util.quote_if_necessary, exp))
             s = util.indented_and_wrapped(
                 [self.colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
                 [self.colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
@@ -200,10 +187,10 @@ class EclContext():
                 pr = self.process(args, enabled_modes, True)
                 varieties.append(
                     ( pr.longest, pr.missing, args[pr.longest:]
-                    , [enabled_modes[0], ' '.join(map(quote_if_necessary, args[:pr.longest]))]
+                    , [enabled_modes[0], ' '.join(map(util.quote_if_necessary, args[:pr.longest]))]
                     , i + 1))
             elif params[i] == '<words>':
-                varieties.append((len(args), [], [], [' '.join(map(quote_if_necessary, args))], i + 1))
+                varieties.append((len(args), [], [], [' '.join(map(util.quote_if_necessary, args))], i + 1))
             else:
                 am, miss = self.param_matched(params[i], args, enabled_modes)
                 varieties.append((am, miss, args[am:], [' '.join(args[:am])], i + 1))

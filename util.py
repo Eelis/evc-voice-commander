@@ -2,6 +2,18 @@ import shutil
 import re
 import collections
 
+def escape(s):
+    x = ''
+    for c in s:
+        if c == '"': x += '\\"'
+        elif c == '\\': x += '\\\\'
+        else: x += c
+    return x
+
+def quote_if_necessary(s):
+    if ' ' not in s and '"' not in s: return s
+    return '"' + escape(s) + '"'
+
 ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
 def strip_markup(s):
     return ansi_escape.sub('', s)
