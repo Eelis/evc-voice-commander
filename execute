@@ -667,7 +667,7 @@ def quote_if_necessary(s):
     x = '"'
     for c in s:
         if c == '"': x += '\\"'
-        elif c == '\\': x += '\\'
+        elif c == '\\': x += '\\\\'
         else: x += c
     x += '"'
     return x

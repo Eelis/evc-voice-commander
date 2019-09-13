@@ -63,7 +63,7 @@ t calculate maximum of 9 and 2
 
 # quoting
 t computer say good morning
-    #> execute zsh -c "echo '(SayText \"good morning\")' | festival"
+    #> execute zsh -c "echo \"(SayText \\\"good morning\\\")\" | festival"
 
 t computer 3 times say hello
-    #> nop, mode computer, execute zsh -c "echo '(SayText \"hello\")' | festival", mode computer, execute zsh -c "echo '(SayText \"hello\")' | festival", mode computer, execute zsh -c "echo '(SayText \"hello\")' | festival"
+    #> nop, mode computer, execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", mode computer, execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", mode computer, execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival"
