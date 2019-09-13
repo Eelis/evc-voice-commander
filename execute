@@ -689,6 +689,10 @@ def handle_alias(input, current_mode, include_autoenabled):
     if r.longest == 0 or r.missing != []: return r
 
     m, expansion = x
+
+    errorpart = 'command ' + colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
+                '  ' + alias_definition_str(m, pattern, 4) + '\n'
+
     nvars = {'windowpid': current_windowpid,
              'windowtitle': current_windowtitle,
              'configdir': configdir,
@@ -710,8 +714,7 @@ def handle_alias(input, current_mode, include_autoenabled):
             varname = expansion[1:i]
             expansion = expansion[i:]
             if varname not in nvars:
-                r.error = colored('error: undefined variable $' + varname + ' in alias: ', 'red') + \
-                    alias_definition_str(m, pattern, 4) + '\n'
+                r.error = errorpart + colored('undefined variable $' + varname, 'red')
                 return r
             replaced += (escape(nvars[varname]) if quoted else nvars[varname])
         else:
@@ -720,18 +723,20 @@ def handle_alias(input, current_mode, include_autoenabled):
 
     exp = split_expansion(replaced)
     sub = process(exp, m, True, False)
+
     if sub.missing == []:
         r.actions = sub.actions
         r.new_mode = sub.new_mode
         r.retval = sub.retval # todo: maybe there are better choices here
+
+        if sub.error is not None:
+            r.error = errorpart + sub.error
     else:
         qexp = list(map(quote_if_necessary, exp))
         s = indented_and_wrapped(
             [colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
             [colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
-        r.error = colored('error:', 'red') + '\n' + \
-            '  input ' + colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
-            '    ' + alias_definition_str(m, pattern, 4) + '\n' + \
+        r.error = errorpart + \
             '  invalid expansion:\n    ' + s + '\n' + \
             '  ' + ('missing ' if sub.longest == len(exp) else 'expected ') + \
             ' or '.join(map(italic_types, sub.missing)) + '\n'
@@ -1007,7 +1012,7 @@ def confirm_input(words, pr, original_input):
         print(printed, end='')
     if pr.error is not None:
         print()
-        print(pr.error)
+        print(colored('error:', 'red'), pr.error)
         sound('good.wav', n)
         sound('bad.wav', 1, wait=False)
         return False
