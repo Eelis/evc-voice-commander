@@ -30,10 +30,6 @@ t computer 3 times print hello
 t arith-demo fibonacci 7
     #> 13
 
-# run
-t computer calendar
-    #> run urxvt -e zsh --interactive -c "cal; sleep 1000"
-
 # complex custom types (<target>)
 t focus change next work space
     #> press wmkey+d, press wmkey+pagedown, press wmkey+a

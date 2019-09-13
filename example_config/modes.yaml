@@ -62,12 +62,12 @@ computer (comp): # general commands
     screen grab: builtin run flameshot gui
     door: builtin run cctv
     in new terminal run <words>: builtin run urxvt -e $4
-    in new shell run <words>: in new terminal run zsh --interactive -c $4
-    in background shell run|execute <words>: builtin $3 zsh -c $4
-    calendar: in new shell run "cal; sleep 1000"
-    job tree: in new shell run "ps fax|less"
+    in new shell run <words>: in new terminal run zsh --interactive -c "$4"
+    in background shell run|execute <words>: builtin $3 zsh -c "$4"
+    calendar: builtin run orage
+    job tree: in new shell run ps fax|less
     live jobs: in new shell run top
-    say <words>: in background shell execute "echo '(SayText \"$1\")' | festival"
+    say <words>: in background shell execute echo "(SayText \"$1\")" | festival
 
 <screen>: chicago/washington/philadelphia
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm
@@ -106,8 +106,8 @@ focus: # wm commands
 system:
     restart/shutdown/jobs/mode <mode>/window processes: builtin $*
     computer|system: mode $0
-    change commands: computer in new shell run "vim '$configdir/modes.yaml'"
-    change replacements: computer in new shell run "vim '$configdir/replacements.yaml'"
+    change commands: computer in new terminal run vim "$configdir/modes.yaml"
+    change replacements: computer in new terminal run vim "$configdir/replacements.yaml"
     kill <job>: builtin cancel job $1
     simple run <word>: builtin run $2 # only consumes one argument, so can be followed by more commands
 
@@ -137,7 +137,7 @@ firefox-navigate:
     go: builtin press enter
 
 firefox:
-    auto-enable: { for-applications: firefox-bin }
+    auto-enable: { for-applications: firefox firefox-bin }
     press <keys>/text <word>: builtin $*
     home|escape|delete|<direction>|space: builtin press $0
     erase: press shift+home,delete
@@ -238,11 +238,17 @@ urxvt:
 
 gitk:
     auto-enable: { for-suffixes: ['- gitk'] }
-    <direction>: builtin press $0
-    <number> <direction>: press $0*$1
+    press <keys>: builtin $*
+    <vdir>: press $0
+    <number> <vdir>: press $0*$1
     change <target>: focus change $1
-    kill: builtin press ctrl+q
+    kill: press ctrl+q
     finish: kill
+
+orage:
+    auto-enable: { for-applications: orage }
+    press <keys>: builtin $*
+    finish: press ctrl+q
 
 <kube-obj-type>: pod|node|service|deployment
 
