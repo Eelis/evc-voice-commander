@@ -663,15 +663,17 @@ class ParseResult():
         self.error = None
         self.retval = None
 
-def quote_if_necessary(s):
-    if ' ' not in s and '"' not in s: return s
-    x = '"'
+def escape(s):
+    x = ''
     for c in s:
         if c == '"': x += '\\"'
         elif c == '\\': x += '\\\\'
         else: x += c
-    x += '"'
     return x
+
+def quote_if_necessary(s):
+    if ' ' not in s and '"' not in s: return s
+    return '"' + escape(s) + '"'
 
 def handle_alias(input, current_mode, include_autoenabled):
     enabled_modes = [current_mode] # important: current_mode comes first
@@ -684,35 +686,55 @@ def handle_alias(input, current_mode, include_autoenabled):
     r.longest, vars, r.missing, pattern, x = \
         longest_matching_pattern(patterns, input, current_mode)
 
-    if r.longest != 0 and r.missing == []:
-        m, expansion = x
-        original_expansion = expansion
-        nvars = [('windowpid', current_windowpid),
-                  ('windowtitle', current_windowtitle),
-                  ('configdir', configdir),
-                  ('*', ' '.join(map(quote_if_necessary, vars[:r.longest])))] + \
-                [(str(i), v) for i, v in enumerate(vars)]
-        for varname, varvalue in nvars:
-            expansion = expansion.replace('"$' + varname + '"', quote_if_necessary(varvalue))
-            expansion = expansion.replace('$' + varname, varvalue)
-        exp = split_expansion(expansion)
+    if r.longest == 0 or r.missing != []: return r
 
-        sub = process(exp, m, True, False)
-        if sub.missing == []:
-            r.actions = sub.actions
-            r.new_mode = sub.new_mode
-            r.retval = sub.retval # todo: maybe there are better choices here
+    m, expansion = x
+    nvars = {'windowpid': current_windowpid,
+             'windowtitle': current_windowtitle,
+             'configdir': configdir,
+             '*': ' '.join(map(quote_if_necessary, vars[:r.longest]))}
+    for i, v in enumerate(vars):
+        nvars[str(i)] = v
+
+    replaced = ''
+    quoted = False
+    while expansion != '':
+        if expansion[0] == '"':
+            quoted = not quoted
+            replaced += '"'
+            expansion = expansion[1:]
+        elif expansion.startswith('$'):
+            i = 1
+            while i < len(expansion) and (expansion[i].isalnum() or expansion[i] == '*'):
+                i += 1
+            varname = expansion[1:i]
+            expansion = expansion[i:]
+            if varname not in nvars:
+                r.error = colored('error: undefined variable $' + varname + ' in alias: ', 'red') + \
+                    alias_definition_str(m, pattern, 4) + '\n'
+                return r
+            replaced += (escape(nvars[varname]) if quoted else nvars[varname])
         else:
-            qexp = list(map(quote_if_necessary, exp))
-            s = indented_and_wrapped(
-                [colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
-                [colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
-            r.error = colored('\nerror:', 'red') + '\n' + \
-                '  input ' + colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
-                '    ' + alias_definition_str(m, pattern, 4) + '\n' + \
-                '  invalid expansion:\n    ' + s + '\n' + \
-                '  ' + ('missing ' if sub.longest == len(exp) else 'expected ') + \
-                ' or '.join(map(italic_types, sub.missing)) + '\n'
+            replaced += expansion[0]
+            expansion = expansion[1:]
+
+    exp = split_expansion(replaced)
+    sub = process(exp, m, True, False)
+    if sub.missing == []:
+        r.actions = sub.actions
+        r.new_mode = sub.new_mode
+        r.retval = sub.retval # todo: maybe there are better choices here
+    else:
+        qexp = list(map(quote_if_necessary, exp))
+        s = indented_and_wrapped(
+            [colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
+            [colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
+        r.error = colored('error:', 'red') + '\n' + \
+            '  input ' + colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
+            '    ' + alias_definition_str(m, pattern, 4) + '\n' + \
+            '  invalid expansion:\n    ' + s + '\n' + \
+            '  ' + ('missing ' if sub.longest == len(exp) else 'expected ') + \
+            ' or '.join(map(italic_types, sub.missing)) + '\n'
 
     return r
 
@@ -984,6 +1006,7 @@ def confirm_input(words, pr, original_input):
         printed = prp + colored(' '.join(words[:n]), 'green')
         print(printed, end='')
     if pr.error is not None:
+        print()
         print(pr.error)
         sound('good.wav', n)
         sound('bad.wav', 1, wait=False)
