@@ -14,7 +14,7 @@ fi
 
 function t() {
     echo $*
-    ./execute --configdir=example_config --prompt=False --printactions --dryrun --volume=0 --color=False $*
+    python3 execute.py --configdir=example_config --prompt=False --printactions --dryrun --volume=0 --color=False $*
 }
 
 ########################### TEST CASES: ###########################

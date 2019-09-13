@@ -1,0 +1,275 @@
+import termcolor
+import subprocess
+import ecl
+import util
+import threading
+
+builtin_commands = {}
+
+dryrun = False
+
+def make_builtin(pattern):
+    def f(g):
+        builtin_commands[pattern] = (None, g)
+        return g
+    return f
+
+def make_functional_builtin(pattern):
+    def f(g):
+        builtin_commands[pattern] = (g, None)
+        return g
+    return f
+
+def is_global_builtin_pattern(pat):
+    pat = pat.split()
+    while pat != [] and pat[0][0] == '<':
+        pat = pat[1:]
+    return pat != [] and pat[0] in ecl.global_builtins
+
+def key_by_name(name):
+    return (extra_key_names[name] if name in extra_key_names else name)
+
+#######################################
+
+@make_builtin('set <word> <word>')
+def cmd_set(ctx, _set, var, val):
+    e = ctx['ecl']
+    e.script_vars[var] = val
+
+@make_functional_builtin('get <word>')
+def cmd_get(ctx, _get, var):
+    e = ctx['ecl']
+    return e.script_vars[var] if var in e.script_vars else 'undefined'
+
+jobs = {}
+next_job_nr = 0
+
+@make_builtin('jobs')
+def cmd_jobs(_):
+    if jobs == {}:
+        print('No active jobs.')
+        return
+    for n, cmd in jobs.items():
+        print(str(n) + ':', cmd)
+
+@make_builtin('cancel job <job>')
+def cmd_cancel_job(_cancel, _job, n):
+    n = int(n)
+    if n in jobs: del jobs[n]
+
+@make_builtin('window processes')
+def cmd_window_processes(*_):
+    print_pstree(current_windowprocesses, 2)
+
+@make_builtin('asynchronously <command>')
+def cmd_asynchronously(ctx, _, mode, cmd):
+    global jobs, next_job_nr
+    pr = ctx['ecl'].process(util.split_expansion(cmd), [mode])
+    n = next_job_nr
+    next_job_nr += 1
+    jobs[n] = cmd
+    def f():
+        # todo: VERY EVIL unsafe concurrent access to 'jobs' below
+        status = 'finished'
+        for act, w in pr.actions:
+            if n not in jobs:
+                status = 'canceled'
+                break
+            act(ctx, *w)
+        if n in jobs: del jobs[n]
+        print(' ', status + ':', ctx['ecl'].colored(cmd, 'green'))
+        #if prompt: print_prompt()
+    threading.Thread(target=f).start()
+
+@make_builtin('run <words>')
+def cmd_run(_ctx, _, cmd):
+    if dryrun: return
+    subprocess.Popen(
+        util.split_expansion(cmd), shell=False, close_fds=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL)
+
+@make_builtin('execute <words>')
+def cmd_execute(ctx, _, cmd):
+    if dryrun: return
+    output = subprocess.Popen(
+        util.split_expansion(cmd), shell=False,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
+    cmd_print(ctx, 'print', output)
+
+@make_builtin('restart')
+def cmd_restart(_):
+    os.execl(sys.argv[0], *sys.argv)
+
+@make_builtin('keydown <key>')
+def press_key(_, key_name):
+    if not dryrun:
+        import pyautogui
+        pyautogui.keyDown(key_by_name(key_name))
+
+@make_builtin('keyup <key>')
+def release_key(_, key_name):
+    if not dryrun:
+        import pyautogui
+        pyautogui.keyUp(key_by_name(key_name))
+
+@make_builtin('nop')
+def cmd_nop(_ctx, _):
+    pass
+
+@make_builtin('shutdown')
+def cmd_exit(_ctx, _):
+    sys.stdout.write("\033[?25h") # restore cursor
+    sys.exit(0)
+
+@make_functional_builtin('<number> plus <number>')
+def cmd_plus(_ctx, x, _p, y):
+    return int(x) + int(y)
+
+@make_functional_builtin('<number> minus <number>')
+def cmd_minus(_ctx, x, _p, y):
+    return int(x) - int(y)
+
+@make_functional_builtin('<number> times <number>')
+def num_times_num(_ctx, x, _p, y):
+    return int(x) * int(y)
+
+@make_functional_builtin('<number> is less than <number>')
+def cmd_less_than(_ctx, x, _is, _less, _than, y):
+    return "true" if int(x) < int(y) else "false"
+
+@make_functional_builtin('<number> is greater than <number>')
+def cmd_less_than(_ctx, x, _is, _greater_, _than, y):
+    return "true" if int(x) > int(y) else "false"
+
+@make_functional_builtin('enumindex <word> <word>')
+def cmd_enumindex(_ctx, _, e, v):
+    l = ecl.enums[e].split('/')
+    return l.index(v) if v in l else -1
+
+def print_builtin(e, pattern):
+    import inspect
+    _, func = builtin_commands[pattern]
+    print('\n' + e.color_commands(pattern), '= ', end='')
+    lines = inspect.getsource(func).split('\n')
+    while lines != [] and lines[-1] == '':
+        lines = lines[:-1]
+    if lines != [] and lines[0].startswith('@make_builtin'):
+        lines = lines[1:]
+    if len(lines) == 1:
+        print(lines[0].strip().rstrip(','))
+    else:
+        print('\n' + '\n'.join(map(lambda s: '    ' + s, lines)), end = '\n\n')
+
+@make_builtin('define <command>')
+def cmd_define(ctx, _, _cmdmode, cmd):
+    ecl = ctx['ecl']
+    em = ctx['enabled_modes']
+
+    args = util.split_expansion(cmd)
+
+    for m in em:
+        for pattern in ecl.modes[m].keys():
+            matched, missing, _ = ecl.params_matched(pattern.split(), args, em)
+            if matched > 0 and missing == []:
+                print('\nin ', end='')
+                print(ecl.alias_definition_str(m, pattern, len('in ')))
+                print()
+                return
+    for pattern, _ in builtin_commands.items():
+        matched, missing, _ = ecl.params_matched(pattern.split(), args, em)
+        if matched > 0 and missing == []:
+            print_builtin(ecl, pattern)
+
+@make_builtin('options')
+def cmd_options(ctx, _):
+    mm = ctx['enabled_modes']
+    e = ctx['ecl']
+    print()
+    builtins_displayed = []
+    modes = e.modes
+
+    def command_pattern(pat):
+        return e.color_commands(e.italic_types(pat)) + ', '
+
+    def simple_pattern(pat):
+        return e.italic_types(pat) + ', '
+
+    for m in mm:
+        indent = len(m) + len("in : ")
+        l = []
+        simples = []
+        for pat, exp in modes[m].items():
+            if exp == 'builtin $*':
+                for form in pat.split('/'):
+                    simples.append(simple_pattern(form))
+            elif exp == 'builtin press $0':
+                if len(pat.split()) == 1:
+                    for alt in pat.split('|'):
+                        simples.append(simple_pattern(alt))
+                else:
+                    simples.append(simple_pattern(pat))
+            elif not pat.startswith('_'):
+                for form in pat.split('/'):
+                    if ' ' in form:
+                        l.append(command_pattern(form))
+                    else:
+                        for alt in form.split('|'):
+                            l.append(command_pattern(alt))
+        l += simples
+        for pat, exp in modes[m].items():
+            if pat in modes and pat != m and exp == 'builtin mode ' + pat:
+                l.append(e.color_mode(pat) + ', ')
+        if l != []:
+            print('in', e.color_mode(m) + ': ', end='')
+            s = l[-1]; l[-1] = s[:-2] # remove last comma
+            print(util.indented_and_wrapped(l, indent), end='\n\n')
+
+    l = [e.italic_types(b) + ', ' for b in builtin_commands.keys() if is_global_builtin_pattern(b)]
+    if l != []:
+        print('global: ', end='')
+        indent = len('global: ')
+        s = l[-1]; l[-1] = s[:-2] # remove last comma
+        print(util.indented_and_wrapped(l, indent), end='\n\n')
+
+@make_builtin('text <word>')
+def cmd_text(_ctx, _, s):
+    if not dryrun:
+        import pyautogui
+        pyautogui.press([c for c in s])
+
+@make_builtin('mode <mode>')
+def cmd_mode(_ctx, _, new_mode):
+    global mode
+    mode = new_mode
+
+@make_functional_builtin('return <word>')
+def cmd_return(_ctx, _, w):
+    return w
+
+@make_builtin('press <keys>')
+def cmd_press(_ctx, _, spec):
+    if dryrun: return
+    import pyautogui
+    for combo in spec.split(','):
+        times = 1
+        mult = combo.find('*')
+        if mult != -1:
+            times = int(combo[:mult])
+            combo = combo[mult+1:]
+        keys = combo.split('+')
+        if len(keys) == 1:
+            k = key_by_name(keys[0])
+            pyautogui.press([k] * times)
+        else:
+            for i in range(times):
+                for k in keys: press_key('press', k)
+                time.sleep(0.05)
+                for k in reversed(keys): release_key('release', k)
+
+@make_builtin('print <word>')
+def cmd_print(ctx, _, s):
+    print(ctx['ecl'].colored(s, 'magenta'))
