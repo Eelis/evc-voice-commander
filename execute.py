@@ -145,8 +145,7 @@ def replace_words(words):
                     return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
-def get_suggestions(missing):
-    if missing == []: return []
+def get_suggestions(missing, enums):
     r = []
     for m in missing:
         for u in m.split('|'):
@@ -158,10 +157,12 @@ def get_suggestions(missing):
                         stdin=subprocess.DEVNULL,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
+                elif type in enums:
+                    mm = [form.split()[0] for form in enums[type].split('/')]
+                    r += get_suggestions(mm, enums)
             else:
                 r.append(u)
     return r
-
 
 def eval_command(words, line):
     global suggestions
@@ -172,7 +173,7 @@ def eval_command(words, line):
     enabled_modes = get_active_modes()
 
     pr = eclc.process(words, enabled_modes, handle_builtins)
-    if pr.longest != 0: suggestions = get_suggestions(pr.missing)
+    if pr.longest != 0: suggestions = get_suggestions(pr.missing, eclc.enums)
     c = confirm_input(words, pr, line)
 
     if printactions:
