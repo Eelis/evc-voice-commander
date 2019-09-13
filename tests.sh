@@ -14,7 +14,7 @@ fi
 
 function t() {
     echo $*
-    ./execute --configdir=example_config --prompt=False --dryrun --volume=0 --color=False $*
+    ./execute --configdir=example_config --prompt=False --printactions --dryrun --volume=0 --color=False $*
 }
 
 ########################### TEST CASES: ###########################

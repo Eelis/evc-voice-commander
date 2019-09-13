@@ -32,6 +32,7 @@ current_windowprocesses = {}
 debug = False
 dryrun = False
 prompt = True
+printactions = False
 color = True
 explicitly_autoenabled = []
 scriptvars = {}
@@ -842,9 +843,10 @@ def eval_command(words, line):
 
     c = confirm_input(words, pr, line)
 
-    actnames = [' '.join(w) for _, w in pr.actions]
-    if actnames != [] and ' '.join(actnames) != ' '.join(words):
-        print(', '.join(actnames))
+    if printactions:
+        actnames = [' '.join(w) for _, w in pr.actions]
+        if actnames != [] and ' '.join(actnames) != ' '.join(words):
+            print(', '.join(actnames))
 
     try:
         for f, w in pr.actions:
@@ -1077,9 +1079,10 @@ def hidden_cursor():
             sys.stdout.write("\033[?25h") # restore cursor
 
 @click.command()
-@click.option('--debug', default=False,type=bool, is_flag=True)
-@click.option('--color', default=True,type=bool)
-@click.option('--prompt', default=True,type=bool)
+@click.option('--debug', default=False, type=bool, is_flag=True)
+@click.option('--color', default=True, type=bool)
+@click.option('--prompt', default=True, type=bool)
+@click.option('--printactions', default=False, type=bool, is_flag=True)
 @click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False, type=bool, is_flag=True)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
@@ -1087,7 +1090,7 @@ def hidden_cursor():
                                                    # (b) won't interfere with speech recognition.
 @click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
-def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
+def evc(debug, color, prompt, printactions, configdir, dryrun, volume, mode, cmd):
     global sound_effects, explicitly_autoenabled
 
     mm = mode.split(',')
@@ -1100,6 +1103,8 @@ def evc(debug, color, prompt, configdir, dryrun, volume, mode, cmd):
     globals()['dryrun'] = dryrun
     globals()['debug'] = debug
     globals()['prompt'] = prompt
+    globals()['printactions'] = printactions
+
     initial_words = list(cmd)
     if volume != 0:
         import pygame
