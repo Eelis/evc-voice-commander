@@ -92,14 +92,6 @@ class Context():
 
     def match_parameter(self, param, args, enabled_modes, i):
         upr = ParseResult(([], [], i))
-        if args[:1] == ['evaluate']:
-            sub = args[1:]
-            x = self.match_command(sub, enabled_modes, True)
-            x.retval = ([str(x.retval)] + sub[x.longest:], [], i)
-            upr.try_improve(x)
-                # not i+1 because still on same parameter
-                # we would need to add 1 to pr.longest to account for having consumed 'evaluate',
-                # but this is canceled out by a -1 to account for the newly inserted argument.
         if param == '<command>':
             x = self.match_command(args, enabled_modes, True)
             x.retval = (args[x.longest:]
@@ -118,6 +110,7 @@ class Context():
         return upr
 
     def match_params(self, params, args, enabled_modes):
+        orig_args = args
         pr = ParseResult()
         pr.retval = []
         i = 0
@@ -136,7 +129,7 @@ class Context():
             pr.try_improve(self.match_params(params(form), input, enabled_modes))
         return pr
 
-    def substitute_variables(self, expansion, vars):
+    def substitute_variables(self, expansion, vars, enabled_modes):
         nvars = self.script_vars.copy()
         nvars['*'] = ' '.join(map(util.quote_if_necessary, vars))
         for i, v in enumerate(vars): nvars[str(i)] = v
@@ -144,10 +137,18 @@ class Context():
         replaced = ''
         quoted = False
         while expansion != '':
+            if not quoted and expansion.startswith(')'):
+                break
             if expansion[0] == '"':
                 quoted = not quoted
                 replaced += '"'
                 expansion = expansion[1:]
+            elif not quoted and expansion.startswith('$('):
+                subcmd, rest, _err = self.substitute_variables(expansion[2:], vars, enabled_modes)
+                pr = self.match_command(subcmd, enabled_modes, True)
+                replaced += str(pr.retval)
+                expansion = rest[1:]
+
             elif expansion.startswith('$'):
                 i = 1
                 while i < len(expansion) and (expansion[i].isalnum() or expansion[i] == '*'):
@@ -161,7 +162,7 @@ class Context():
             else:
                 replaced += expansion[0]
                 expansion = expansion[1:]
-        return (util.split_expansion(replaced), err)
+        return (util.split_expansion(replaced), expansion, err)
 
     def match_alias(self, input, enabled_modes):
         r = ParseResult((None, None, None, None))
@@ -178,7 +179,7 @@ class Context():
         errorpart = 'command ' + self.colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
                     '  ' + self.alias_definition_str(m, pattern, 4) + '\n'
 
-        exp, err = self.substitute_variables(expansion, vars[:r.longest])
+        exp, _rest, err = self.substitute_variables(expansion, vars[:r.longest], enabled_modes)
         if err is not None:
             r.error = errorpart + self.colored(err, 'red')
             return r

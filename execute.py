@@ -263,7 +263,7 @@ def confirm_input(words, pr, original_input):
     printed = ''
     if n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit()):
         if prompt: util.clear_line()
-        print(prp + colored(truncate(original_input, cols - len(util.strip_markup(prp))), 'yellow'), end='\r')
+        print(prp + colored(util.truncate(original_input, cols - len(util.strip_markup(prp))), 'yellow'), end='\r')
         sys.stdout.flush()
         return False
     if prompt:
@@ -284,7 +284,7 @@ def confirm_input(words, pr, original_input):
                 print(' ', end='')
                 printed += ' '
             avail = cols - len(util.strip_markup(printed))
-            print(colored(truncate(' '.join(words[n:]), avail), 'red'), end='')
+            print(colored(util.truncate(' '.join(words[n:]), avail), 'red'), end='')
         elif pr.missing != []:
             # if all words were consumed but evaluation still went bad,
             # it means additional input was missing

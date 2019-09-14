@@ -20,7 +20,7 @@ duration:
 
 <ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster
 mode-map:
-    mode <ext-mode>: builtin mode evaluate $1
+    mode <ext-mode>: builtin mode $($1)
     return <ext-mode>: builtin return $1
 
     <mode>: return $0
@@ -35,10 +35,9 @@ mode-map:
 
 control ():
     auto-enable: { always: True }
-    _rep-impl-f <word> 0: builtin nop
-    _rep-impl-g <word> <number>: _rep-impl-f "$1" evaluate builtin $2 minus 1
-    _rep-impl-f <word> <number>: _rep-impl-g "$1" $2 $1
-    <number> times <command>: _rep-impl-f "builtin mode $2 $3" $0
+    _rep-impl-f 0 <word>: builtin nop
+    _rep-impl-f <number> <word>: _rep-impl-f $(builtin $1 minus 1) "$2" $2
+    <number> times <command>: _rep-impl-f $0 "builtin mode $2 $3"
 
 # main modes:
 
@@ -60,7 +59,7 @@ computer (comp): # general commands
     kill <job>: builtin cancel job $1
     simple run <word>: builtin run $2 # only consumes one argument, so can be followed by more commands
     sleep seconds <number>: builtin execute sleep $2
-    sleep <duration>: sleep seconds evaluate duration $1 in seconds
+    sleep <duration>: sleep seconds $(duration $1 in seconds)
     in <duration> <command>: builtin asynchronously sleep $1 $2 $3
     new browser: simple run firefox mode firefox
     new terminal: simple run urxvt mode urxvt
@@ -99,7 +98,7 @@ focus: # wm commands
 
     # targets: (these can be used with 'change' defined above to move the window to the target)
     <direction>: press wmkey+$0
-    <screen>: press wmkey+y press evaluate builtin enumindex screen $0
+    <screen>: press wmkey+y press $(builtin enumindex screen $0)
     frame <number>: press wmkey+j,$1
     next window: press wmkey+tab
     previous window: press wmkey+shift+tab
@@ -286,24 +285,23 @@ arith-demo:
 
     <number> minus 0: return $0
     0 minus <number>: return 0
-    <number> minus <number>: decrement evaluate $0 minus evaluate decrement $2
+    <number> minus <number>: decrement $($0 minus $(decrement $2))
 
     <number> plus 0: return $0
     0 plus <number>: return $2
-    <number> plus <number>: increment evaluate $0 plus evaluate decrement $2
+    <number> plus <number>: increment $($0 plus $(decrement $2))
 
     0 times <number>: return 0
-    <number> times <number>: $2 plus evaluate $2 times evaluate decrement $0
+    <number> times <number>: $2 plus $($2 times $(decrement $0))
 
     <number> is less than 0: return false
     0 is less than <number>: return true
-    <number> is less than <number>: lth $4 evaluate decrement $0
-    lth <number> <number>: $2 is less than evaluate decrement $1
+    <number> is less than <number>: lth $4 $(decrement $0)
+    lth <number> <number>: $2 is less than $(decrement $1)
 
     fibonacci 0: return 0
     fibonacci 1: return 1
-    fibhalf <number> <number>: $2 plus evaluate fibonacci evaluate $1 minus 2
-    fibonacci <number>: fibhalf $1 evaluate fibonacci evaluate $1 minus 1
+    fibonacci <number>: $(fibonacci $($1 minus 1)) plus $(fibonacci $($1 minus 2))
 
 calculate (calc):
     print <word>/return <word>/<number> plus|minus|times <number>: builtin $*
@@ -311,13 +309,13 @@ calculate (calc):
 
     make <word> <word>: builtin set $1 $2
     value of <word>: builtin get $2
-    increase <word> by <number>: make $1 evaluate $3 plus evaluate value of $1
+    increase <word> by <number>: make $1 $($(value of $1) plus $3)
     increment <word>: increase $1 by 1
 
     <number> or <number> depending on whether true: return $0
     <number> or <number> depending on whether false: return $2
 
     maximum of <number> and <number>:
-        $4 or $2 depending on whether evaluate $2 is less than $4
+        $4 or $2 depending on whether $($2 is less than $4)
     minimum of <number> and <number>:
-        $2 or $4 depending on whether evaluate $2 is less than $4
+        $2 or $4 depending on whether $($2 is less than $4)
