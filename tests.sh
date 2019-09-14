@@ -54,8 +54,10 @@ t computer edit insert text bla escape
 # conditionals
 t calculate maximum of 2 and 9
     #> 9
+    #> mode control
 t calculate maximum of 9 and 2
     #> 9
+    #> mode control
 
 # quoting
 t computer say good morning

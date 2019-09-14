@@ -93,14 +93,19 @@ class Context():
     def match_parameter(self, param, args, enabled_modes, i):
         upr = ParseResult(([], [], i))
         if param == '<command>':
-            x = self.match_command(args, enabled_modes, True)
+            x = self.match_command(args, enabled_modes, True, True)
+            consumed = args[:x.longest]
+            if consumed[:2] != ['builtin', 'mode']:
+                consumed = ['builtin', 'mode', enabled_modes[0]] + consumed
             x.retval = (args[x.longest:]
-               , [enabled_modes[0], ' '.join(map(util.quote_if_necessary, args[:x.longest]))]
+               , [' '.join(map(util.quote_if_necessary, consumed))]
                , i + 1)
             upr.try_improve(x)
         elif param == '<words>':
-            x = ParseResult(([], [' '.join(map(util.quote_if_necessary, args))], i + 1))
-            x.longest = len(args)
+            x = ParseResult()
+            while x.longest < len(args) and args[x.longest] != ';':
+                x.longest += 1
+            x.retval = (args[x.longest:], [' '.join(map(util.quote_if_necessary, args[:x.longest]))], i + 1)
             upr.try_improve(x)
         else:
             x = ParseResult()
@@ -146,7 +151,7 @@ class Context():
             elif not quoted and expansion.startswith('$('):
                 sub = expansion[2:]
                 args, rest, _err = self.substitute_variables(sub, vars, enabled_modes)
-                pr = self.match_command(args, enabled_modes, True)
+                pr = self.match_command(args, enabled_modes, True, False)
                 consumed = args[:pr.longest]
                 unconsumed = args[pr.longest:]
                 if pr.error is not None:
@@ -202,15 +207,17 @@ class Context():
             r.error = errorpart + err
             return r
 
-        sub = self.match_command(exp, [m], True)
-        if sub.missing == []:
+        sub = self.match_command(exp, [m], True, False)
+        if sub.error is not None:
+            r.error = errorpart + sub.error
+        elif sub.missing != []:
+            r.error = errorpart + self.describe_cmd_parse_result(sub, exp)
+        else:
             r.actions = sub.actions
             r.new_mode = sub.new_mode
             r.retval = sub.retval # todo: maybe there are better choices here
             if sub.error is not None:
                 r.error = errorpart + sub.error
-        else:
-            r.error = errorpart + self.describe_cmd_parse_result(sub, exp)
         return r
 
     def match_builtin(self, input, enabled_modes, only_global):
@@ -239,7 +246,7 @@ class Context():
                 r.longest += 1 # to account for 'builtin' itself
         return r
 
-    def match_command(self, words, enabled_modes, handle_builtins=True):
+    def match_command(self, words, enabled_modes, handle_builtins=True, stop_on_semicolon=False):
         r = self.match_alias(words, enabled_modes)
         if handle_builtins and r.error is None:
             r.try_improve(self.match_builtin(words, enabled_modes, True))
@@ -251,7 +258,12 @@ class Context():
             if r.new_mode is not None:
                 enabled_modes[0] = r.new_mode
             if r.longest != len(words) and r.error is None:
-                r2 = self.match_command(words[r.longest:], enabled_modes, True)
+                w = words[r.longest:]
+                if w != [] and w[0] == ';':
+                    if stop_on_semicolon: return r
+                    w = w[1:]
+                    r.longest += 1
+                r2 = self.match_command(w, enabled_modes, True, stop_on_semicolon)
                 r.longest += r2.longest
                 r.missing = r2.missing
                 r.actions += r2.actions
