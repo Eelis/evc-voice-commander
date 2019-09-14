@@ -54,11 +54,16 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
 computer (comp): # general commands
     <ext-mode>: builtin mode mode-map mode $0
     print <word>/press <keys>: builtin $*
+    restart commander/shutdown commander/jobs/mode <mode>/window processes: builtin $*
+    change commands: in new terminal run vim "$configdir/modes.yaml"
+    change replacements: in new terminal run vim "$configdir/replacements.yaml"
+    kill <job>: builtin cancel job $1
+    simple run <word>: builtin run $2 # only consumes one argument, so can be followed by more commands
     sleep seconds <number>: builtin execute sleep $2
     sleep <duration>: sleep seconds evaluate duration $1 in seconds
     in <duration> <command>: builtin asynchronously sleep $1 $2 $3
-    new browser: system simple run firefox mode firefox
-    new terminal: system simple run urxvt mode urxvt
+    new browser: simple run firefox mode firefox
+    new terminal: simple run urxvt mode urxvt
     screen grab: builtin run flameshot gui
     door: builtin run cctv
     in new terminal run <words>: builtin run urxvt -e $4
@@ -69,7 +74,7 @@ computer (comp): # general commands
     live jobs: in new shell run top
     say <words>: in background shell execute echo "(SayText \"$1\")" | festival
 
-<screen>: chicago/washington/philadelphia
+<screen>: sheffield/manchester/liverpool
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm
 <wm-object>: window/tab/frame/screen/work space
 <target>:
@@ -90,6 +95,7 @@ focus: # wm commands
     kill: press wmkey+c
     split <direction>: press wmkey+s,$1
     join: press wmkey+v
+    maximize: press wmkey+enter
 
     # targets: (these can be used with 'change' defined above to move the window to the target)
     <direction>: press wmkey+$0
@@ -101,17 +107,7 @@ focus: # wm commands
     previous work space: press wmkey+pageup
     new work space: press wmkey+w
 
-# evc utilities:
-
-system:
-    restart/shutdown/jobs/mode <mode>/window processes: builtin $*
-    computer|system: mode $0
-    change commands: computer in new terminal run vim "$configdir/modes.yaml"
-    change replacements: computer in new terminal run vim "$configdir/replacements.yaml"
-    kill <job>: builtin cancel job $1
-    simple run <word>: builtin run $2 # only consumes one argument, so can be followed by more commands
-
-# specific applications:
+# applications:
 
 top:
     auto-enable: { for-applications: top }
@@ -210,10 +206,9 @@ vim:
 
 vlc:
     auto-enable: { for-applications: vlc }
-    maximize: press f
-    kill: press wmkey+c
-    mark: press wmkey+d  focus
-    change <target>: focus change $1
+    press <keys>: builtin $*
+    full screen: press f
+    finish: press ctrl+q
 
 zsh:
     auto-enable: { for-leaf-applications: zsh }

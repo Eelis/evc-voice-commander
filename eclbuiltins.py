@@ -3,6 +3,8 @@ import subprocess
 import ecl
 import util
 import threading
+import os
+import sys
 
 builtin_commands = {}
 
@@ -160,8 +162,8 @@ def cmd_execute(ctx, _, cmd):
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
     cmd_print(ctx, 'print', output)
 
-@make_builtin('restart')
-def cmd_restart(_):
+@make_builtin('restart commander')
+def cmd_restart(_ctx, _restart, _commander):
     os.execl(sys.argv[0], *sys.argv)
 
 @make_builtin('keydown <key>')
@@ -180,8 +182,8 @@ def release_key(_, key_name):
 def cmd_nop(_ctx, _):
     pass
 
-@make_builtin('shutdown')
-def cmd_exit(_ctx, _):
+@make_builtin('shutdown commander')
+def cmd_exit(_ctx, _shutdown, _commander):
     sys.stdout.write("\033[?25h") # restore cursor
     sys.exit(0)
 
