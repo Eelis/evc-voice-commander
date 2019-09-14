@@ -5,6 +5,7 @@ import util
 import threading
 import os
 import sys
+import util
 
 builtin_commands = {}
 
@@ -121,7 +122,8 @@ def cmd_cancel_job(_cancel, _job, n):
 
 @make_builtin('window processes')
 def cmd_window_processes(*_):
-    print_pstree(current_windowprocesses, 2)
+    _, processes = util.get_current_application()
+    print('  ' + util.print_pstree(processes, 2))
 
 @make_builtin('asynchronously <command>')
 def cmd_asynchronously(ctx, _, mode, cmd):

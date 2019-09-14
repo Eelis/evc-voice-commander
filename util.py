@@ -1,6 +1,7 @@
 import shutil
 import re
 import collections
+import subprocess
 import time
 import sys
 
@@ -40,25 +41,28 @@ def indented_and_wrapped(l, n):
 def process_family(pid):
     import psutil
     children = collections.defaultdict(list)
-    names = {}
     for p in psutil.process_iter():
         try:
             children[p.ppid()].append(p.pid)
-            names[p.pid] = p.name()
         except (psutil.NoSuchProcess, psutil.ZombieProcess):
             pass
     start = [pid]
-    return pstree_branch(start, names, children)
+    return pstree_branch(start, children)
 
 terminal_apps = ['urxvt']
 
-def pstree_branch(pids, names, children, stop_on_terminal=False):
+def pstree_branch(pids, children, stop_on_terminal=False):
+    import psutil
     r = {}
     for pid in pids:
-        name = (names[pid] if pid in names else '?')
+        pro = psutil.Process(pid)
+        name = pro.name()
         if stop_on_terminal and name in terminal_apps: continue
-        b = (pstree_branch(children[pid], names, children, True) if pid in children else {})
+        b = (pstree_branch(children[pid], children, True) if pid in children else {})
         b['name'] = name
+        try: b['cwd'] = pro.cwd()
+        except: pass
+        b['pid'] = pid
         r[pid] = b
     return r
 
@@ -109,14 +113,20 @@ def simple_subprocess(cmd):
     return p.stdout.read().decode('utf-8').rstrip()
 
 def print_pstree(t, indent=0):
-    if 'name' in t:
-        print(t['name'])
-    else:
-        print('?')
+    r = ''
+    pre = ''
+    corner = ' └ '
+    if 'pid' in t:
+        name = (t['name'] if 'name' in t else '?')
+        r += name + ' (pid: ' + str(t['pid'])
+        if 'cwd' in t: r += ', cwd: ' + t['cwd']
+        r += ')\n'
+        pre = ' ' * indent + corner
+        indent += len(corner)
     for k, v in t.items():
-        if k != 'name':
-            print(' ' * indent + '- ', end='')
-            print_pstree(v, indent + 2)
+        if type(k) is int:
+            r += pre + print_pstree(v, indent)
+    return r
 
 def italic(s):
     turn_on_italic = "\x1B[3m"
@@ -141,3 +151,14 @@ def clear_line():
 
 def truncate(s, n):
     return (s[:n-3] + '...' if len(s) > n else s)
+
+def get_current_application():
+    current_windowtitle = ''
+    current_windowprocesses = {}
+    active_win = simple_subprocess('xdotool getactivewindow')
+    if active_win == '': return
+    current_windowtitle = simple_subprocess('xdotool getwindowname ' + active_win)
+    current_windowpid = simple_subprocess('xdotool getwindowpid ' + active_win)
+    if current_windowpid != '':
+        current_windowprocesses = process_family(int(current_windowpid))
+    return (current_windowtitle, current_windowprocesses)

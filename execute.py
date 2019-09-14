@@ -190,7 +190,7 @@ def eval_command(words, line):
 
 async def process_lines(input):
     import asyncio
-    global mode
+    global mode, current_windowtitle, current_windowprocesses
     loop = asyncio.get_event_loop()
     reader = asyncio.StreamReader(loop=loop, limit=asyncio.streams._DEFAULT_LIMIT)
     await loop.connect_read_pipe(
@@ -205,7 +205,7 @@ async def process_lines(input):
         try:
             line = await asyncio.wait_for(reader.readline(), 0.5)
         except asyncio.TimeoutError:
-            get_current_application()
+            current_windowtitle, current_windowprocesses = util.get_current_application()
             m = get_active_modes()
             if last_active_modes != m:
                 last_active_modes = m
@@ -316,14 +316,7 @@ def confirm_input(words, pr, original_input):
 
 def get_current_application():
     global current_windowtitle, current_windowprocesses
-    current_windowtitle = ''
-    current_windowprocesses = {}
-    active_win = simple_subprocess('xdotool getactivewindow')
-    if active_win == '': return
-    current_windowtitle = simple_subprocess('xdotool getwindowname ' + active_win)
-    current_windowpid = simple_subprocess('xdotool getwindowpid ' + active_win)
-    if current_windowpid != '':
-        current_windowprocesses = util.process_family(int(current_windowpid))
+    current_windowtitle, current_windowprocesses = util.get_current_application()
 
 ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
 
