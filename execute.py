@@ -3,7 +3,6 @@
 import ecl
 import eclbuiltins
 import util
-import time
 import os
 import subprocess
 import sys
@@ -124,8 +123,6 @@ def get_active_modes():
     return [mode] + [m for m in eclc.modes if m != mode and mode_is_auto_enabled(mode, m)]
         # important: mode itself comes first
 
-def color_commands(p): return colored(p, 'magenta')
-
 def color_mode(m): return colored(m, 'cyan')
 
 # input preprocessing:
@@ -147,24 +144,19 @@ def replace_words(words):
                     return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
-def get_suggestions(missing, enums):
-    r = []
-    for m in missing:
-        for u in m.split('|'):
-            if u.startswith('<'):
-                type = u[1:-1]
-                if type in completions:
-                    cmd = completions[type]
-                    r += subprocess.Popen(cmd, shell=True,
-                        stdin=subprocess.DEVNULL,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
-                elif type in enums:
-                    mm = [form.split()[0] for form in enums[type].split('/')]
-                    r += get_suggestions(mm, enums)
-            else:
-                r.append(u)
-    return r
+def get_suggestions_for_type(type, enums):
+    if type in completions:
+        return subprocess.Popen(completions[type], shell=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
+    if type in enums:
+        return [x for form in ecl.forms(enums[type])
+                  for x in get_suggestions(ecl.params(form)[0], enums)]
+    return []
+
+def get_suggestions(param, enums):
+    return [x for u in ecl.alternatives(param)
+              for x in (get_suggestions_for_type(u[1:-1], enums) if u.startswith('<') else [u])]
 
 def eval_command(words, line):
     global suggestions
@@ -175,7 +167,8 @@ def eval_command(words, line):
     enabled_modes = get_active_modes()
 
     pr = eclc.match_command(words, enabled_modes, handle_builtins)
-    if pr.longest != 0: suggestions = get_suggestions(pr.missing, eclc.enums)
+    if pr.longest != 0:
+        suggestions = [y for x in pr.missing for y in get_suggestions(x, eclc.enums)]
     c = confirm_input(words, pr, line)
 
     if printactions:
@@ -192,7 +185,7 @@ def eval_command(words, line):
     except Exception as e:
         print(colored(' '.join(attempt) + ": " + str(e), 'red'))
 
-    if c: clear_line()
+    if c and prompt: util.clear_line()
     return pr.longest
 
 async def process_lines(input):
@@ -217,7 +210,7 @@ async def process_lines(input):
             if last_active_modes != m:
                 last_active_modes = m
                 if prompt:
-                    clear_line()
+                    util.clear_line()
                     print_prompt()
         else:
             if not line: break # EOF
@@ -247,26 +240,8 @@ async def process_lines(input):
                     if prompt: print_prompt()
                     last_active_modes = get_active_modes()
 
-# output:
-
-def sound(n, count=1, wait=True):
-    if count == 0 or not sound_effects: return
-    import pygame
-    pygame.mixer.music.load("sounds/" + n)
-    for i in range(0, count):
-        pygame.mixer.music.play()
-        if wait:
-            while pygame.mixer.music.get_busy(): time.sleep(0.01)
-            time.sleep(0.1)
-
 def short_mode_name(mode):
     return (short_mode_names[mode] if mode in short_mode_names else mode)
-
-def clear_line():
-    if not sys.stdout.isatty() or not prompt: return
-    cols = shutil.get_terminal_size().columns
-    print('\r' + ' ' * cols + '\r', end='')
-    sys.stdout.flush()
 
 def prompt_string():
     current, *auto = get_active_modes()
@@ -275,14 +250,11 @@ def prompt_string():
     if short_current != '': mm = [short_current]
     elif auto != []: mm = [current]
     mm += [s for s in list(map(short_mode_name, auto)) if s != '']
-    return ','.join(map(color_mode, mm)) + '> '
+    return ','.join(map(eclc.color_mode, mm)) + '> '
 
 def print_prompt():
     print(prompt_string(), end='')
     sys.stdout.flush()
-
-def truncate(s, n):
-    return (s[:n-3] + '...' if len(s) > n else s)
 
 def confirm_input(words, pr, original_input):
     n = pr.longest
@@ -290,19 +262,20 @@ def confirm_input(words, pr, original_input):
     prp = prompt_string()
     printed = ''
     if n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit()):
-        clear_line()
+        if prompt: util.clear_line()
         print(prp + colored(truncate(original_input, cols - len(util.strip_markup(prp))), 'yellow'), end='\r')
         sys.stdout.flush()
         return False
     if prompt:
-        clear_line()
+        util.clear_line()
         printed = prp + colored(' '.join(words[:n]), 'green')
         print(printed, end='')
     if pr.error is not None:
         print()
         print(colored('error:', 'red'), pr.error)
-        sound('good.wav', n)
-        sound('bad.wav', 1, wait=False)
+        if sound_effects:
+            util.sound('good.wav', n)
+            util.sound('bad.wav', 1, wait=False)
         return False
 
     if prompt:
@@ -335,9 +308,10 @@ def confirm_input(words, pr, original_input):
             problem = ('missing' if n == len(words) else 'expected')
             print(colored('error: ' + problem + ' ' + what, 'red'))
 
-    sound('good.wav', n)
-    if n != len(words) or pr.missing != []:
-        sound('bad.wav', 1, wait=False)
+    if sound_effects:
+        util.sound('good.wav', n)
+        if n != len(words) or pr.missing != []:
+            util.sound('bad.wav', 1, wait=False)
     return True
 
 def get_current_application():

@@ -1,6 +1,8 @@
 import shutil
 import re
 import collections
+import time
+import sys
 
 def escape(s):
     x = ''
@@ -120,3 +122,22 @@ def italic(s):
     turn_on_italic = "\x1B[3m"
     turn_off_italic = "\x1B[23m"
     return turn_on_italic + s + turn_off_italic
+
+def sound(name, count=1, wait=True):
+    if count == 0: return
+    import pygame
+    pygame.mixer.music.load("sounds/" + name)
+    for i in range(0, count):
+        pygame.mixer.music.play()
+        if wait:
+            while pygame.mixer.music.get_busy(): time.sleep(0.01)
+            time.sleep(0.1)
+
+def clear_line():
+    if not sys.stdout.isatty(): return
+    cols = shutil.get_terminal_size().columns
+    print('\r' + ' ' * cols + '\r', end='')
+    sys.stdout.flush()
+
+def truncate(s, n):
+    return (s[:n-3] + '...' if len(s) > n else s)
