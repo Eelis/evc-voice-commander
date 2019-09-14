@@ -144,11 +144,19 @@ class Context():
                 replaced += '"'
                 expansion = expansion[1:]
             elif not quoted and expansion.startswith('$('):
-                subcmd, rest, _err = self.substitute_variables(expansion[2:], vars, enabled_modes)
-                pr = self.match_command(subcmd, enabled_modes, True)
+                sub = expansion[2:]
+                args, rest, _err = self.substitute_variables(sub, vars, enabled_modes)
+                pr = self.match_command(args, enabled_modes, True)
+                consumed = args[:pr.longest]
+                unconsumed = args[pr.longest:]
+                if pr.error is not None:
+                    err = pr.error
+                    break
+                if pr.missing != [] or pr.longest != len(args):
+                    err = self.describe_cmd_parse_result(pr, args)
+                    break
                 replaced += str(pr.retval)
                 expansion = rest[1:]
-
             elif expansion.startswith('$'):
                 i = 1
                 while i < len(expansion) and (expansion[i].isalnum() or expansion[i] == '*'):
@@ -164,6 +172,16 @@ class Context():
                 expansion = expansion[1:]
         return (util.split_expansion(replaced), expansion, err)
 
+    def describe_cmd_parse_result(self, pr, exp):
+        qexp = list(map(util.quote_if_necessary, exp))
+        x = [self.colored(s, 'green') + ' ' for s in qexp[:pr.longest]] + \
+            [self.colored(s, 'red') + ' ' for s in qexp[pr.longest:]]
+        if pr.longest == len(exp): x.append(self.colored('???', 'red'))
+        s = util.indented_and_wrapped(x, 4)
+        return 'invalid command:\n  ' + s + '\n' + \
+            ('missing ' if pr.longest == len(exp) else 'expected ') + \
+            ' or '.join(map(self.italic_types, pr.missing)) + '\n'
+
     def match_alias(self, input, enabled_modes):
         r = ParseResult((None, None, None, None))
         for m in enabled_modes:
@@ -176,12 +194,12 @@ class Context():
         if r.longest == 0 or r.missing != []: return r
         vars, m, expansion, pattern = r.retval
 
-        errorpart = 'command ' + self.colored(' '.join(input[:r.longest]), 'green') + ' matched alias:\n' + \
-                    '  ' + self.alias_definition_str(m, pattern, 4) + '\n'
+        errorpart = 'command ' + self.colored(' '.join(map(util.quote_if_necessary, input[:r.longest])), 'green') + \
+            ' matched alias:\n  ' + self.alias_definition_str(m, pattern, 4) + '\n'
 
         exp, _rest, err = self.substitute_variables(expansion, vars[:r.longest], enabled_modes)
         if err is not None:
-            r.error = errorpart + self.colored(err, 'red')
+            r.error = errorpart + err
             return r
 
         sub = self.match_command(exp, [m], True)
@@ -192,14 +210,7 @@ class Context():
             if sub.error is not None:
                 r.error = errorpart + sub.error
         else:
-            qexp = list(map(util.quote_if_necessary, exp))
-            s = util.indented_and_wrapped(
-                [self.colored(s, 'green') + ' ' for s in qexp[:sub.longest]] +
-                [self.colored(s, 'red') + ' ' for s in qexp[sub.longest:]], 4)
-            r.error = errorpart + \
-                '  invalid expansion:\n    ' + s + '\n' + \
-                '  ' + ('missing ' if sub.longest == len(exp) else 'expected ') + \
-                ' or '.join(map(self.italic_types, sub.missing)) + '\n'
+            r.error = errorpart + self.describe_cmd_parse_result(sub, exp)
         return r
 
     def match_builtin(self, input, enabled_modes, only_global):
