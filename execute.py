@@ -20,7 +20,9 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 configdir = ''
 numbers = {}
 word_replacements = {}
-eclc = ecl.EclContext()
+eclc = ecl.Context()
+eclc.builtin_commands = eclbuiltins.builtin_commands
+eclc.builtin_types = eclbuiltins.builtin_types
 short_mode_names = {}
 auto_enable_cfg = {}
 explicitly_autoenabled = []
@@ -172,7 +174,7 @@ def eval_command(words, line):
 
     enabled_modes = get_active_modes()
 
-    pr = eclc.process(words, enabled_modes, handle_builtins)
+    pr = eclc.match_command(words, enabled_modes, handle_builtins)
     if pr.longest != 0: suggestions = get_suggestions(pr.missing, eclc.enums)
     c = confirm_input(words, pr, line)
 

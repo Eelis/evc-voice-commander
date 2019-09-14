@@ -115,3 +115,8 @@ def print_pstree(t, indent=0):
         if k != 'name':
             print(' ' * indent + '- ', end='')
             print_pstree(v, indent + 2)
+
+def italic(s):
+    turn_on_italic = "\x1B[3m"
+    turn_off_italic = "\x1B[23m"
+    return turn_on_italic + s + turn_off_italic

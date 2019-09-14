@@ -124,7 +124,7 @@ def cmd_window_processes(*_):
 @make_builtin('asynchronously <command>')
 def cmd_asynchronously(ctx, _, mode, cmd):
     global jobs, next_job_nr
-    pr = ctx['ecl'].process(util.split_expansion(cmd), [mode])
+    pr = ctx['ecl'].match_command(util.split_expansion(cmd), [mode])
     n = next_job_nr
     next_job_nr += 1
     jobs[n] = cmd
@@ -228,20 +228,18 @@ def print_builtin(e, pattern):
 def cmd_define(ctx, _, _cmdmode, cmd):
     ecl = ctx['ecl']
     em = ctx['enabled_modes']
-
     args = util.split_expansion(cmd)
-
     for m in em:
         for pattern in ecl.modes[m].keys():
-            matched, missing, _ = ecl.params_matched(pattern.split(), args, em)
-            if matched > 0 and missing == []:
+            pr = ecl.match_pattern(pattern, args, em)
+            if pr.longest > 0 and pr.missing == []:
                 print('\nin ', end='')
                 print(ecl.alias_definition_str(m, pattern, len('in ')))
                 print()
                 return
     for pattern, _ in builtin_commands.items():
-        matched, missing, _ = ecl.params_matched(pattern.split(), args, em)
-        if matched > 0 and missing == []:
+        pr = ecl.match_pattern(pattern, args, em)
+        if pr.longest > 0 and pr.missing == []:
             print_builtin(ecl, pattern)
 
 @make_builtin('options')
