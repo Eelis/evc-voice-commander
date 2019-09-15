@@ -83,12 +83,13 @@ def occurs_in_branch(x, processes):
     return False
 
 def occurs_as_leaf_in_branch(x, processes):
-    if len(processes) == 1 and 'name' in processes and processes['name'] == x:
-        return True
-    for k, v in processes.items():
-        if type(v) is dict and occurs_as_leaf_in_branch(x, v):
-            return True
-    return False
+    children = False
+    for v in processes.values():
+        if type(v) is dict:
+            children = True
+            if occurs_as_leaf_in_branch(x, v):
+                return True
+    return not children and 'name' in processes and processes['name'] == x
 
 def parse_quoted_string(s):
     s = s[1:] # skip first "
