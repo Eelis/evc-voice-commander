@@ -25,3 +25,4 @@ features:
 - on startup, let user know when asr is ready for commands
 - "define type"
 - have output as an OSD-style overlay window
+- things like ctrl-o and ctrl-q seem to be pretty standard among all.. qt/gtk apps? see if we can detect those

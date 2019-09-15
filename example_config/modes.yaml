@@ -1,5 +1,6 @@
 # general-purpose types:
 
+<bool>: "true/false"
 <vdir>: up/down
 <hdir>: left/right
 <direction>: <hdir>/<vdir>
@@ -35,9 +36,16 @@ mode-map:
 
 control ():
     auto-enable: { always: True }
-    _rep-impl-f 0 <word>: builtin nop
-    _rep-impl-f <number> <word>: _rep-impl-f $(builtin $1 minus 1) "$2" $2
-    <number> times <command>: _rep-impl-f $0 "builtin mode $2 $3"
+
+    0 times <command>: '{}'
+    <positive> times <command>: $(builtin $0 minus 1) times $2 ; $2
+
+    if true <command> else <command>: $2
+    if false <command> else <command>: $4
+    if <bool> <command>: if $1 $2 else {}
+
+    start dictation|dictating: builtin set dictation true
+    stop dictation|dictating: builtin set dictation false
 
 # main modes:
 
@@ -52,23 +60,22 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
 
 computer (comp): # general commands
     <ext-mode>: builtin mode mode-map mode $0
-    print <word>/press <keys>: builtin $*
-    restart commander/shutdown commander/jobs/mode <mode>/window processes: builtin $*
+    print <words>/press <keys>/run <words>: ~builtin
+    restart commander/shutdown commander/jobs/mode <mode>/window processes: ~builtin
     change commands: in new terminal run vim "$configdir/modes.yaml"
     change replacements: in new terminal run vim "$configdir/replacements.yaml"
     kill <job>: builtin cancel job $1
-    simple run <word>: builtin run $2 # only consumes one argument, so can be followed by more commands
     sleep seconds <number>: builtin execute sleep $2
     sleep <duration>: sleep seconds $(duration $1 in seconds)
-    in <duration> <command>: builtin asynchronously sleep $1 $2 $3
-    new browser: simple run firefox mode firefox
-    new terminal: simple run urxvt mode urxvt
-    screen grab: builtin run flameshot gui
-    door: builtin run cctv
-    in new terminal run <words>: builtin run urxvt -e $4
+    in <duration> <command>: builtin asynchronously sleep $1 $2
+    new browser: run firefox ; mode firefox
+    new terminal: run urxvt ; mode urxvt
+    screen grab: run flameshot gui
+    door: run cctv
+    in new terminal run <words>: run urxvt -e $4
     in new shell run <words>: in new terminal run zsh --interactive -c "$4"
     in background shell run|execute <words>: builtin $3 zsh -c "$4"
-    calendar: builtin run orage
+    calendar: run orage
     job tree: in new shell run ps fax|less
     live jobs: in new shell run top
     say <words>: in background shell execute echo "(SayText \"$1\")" | festival
@@ -84,7 +91,7 @@ computer (comp): # general commands
     - new work space
 
 focus: # wm commands
-    press <keys>: builtin $*
+    press <keys>: ~builtin
     <mode>: builtin mode $0
 
     mark: press wmkey+d
@@ -110,22 +117,23 @@ focus: # wm commands
 
 top:
     auto-enable: { for-applications: top }
-    press <keys>: builtin $*
+    press <keys>: ~builtin
     finish: press q
 
 less:
     auto-enable: { for-applications: less }
-    press <keys>: builtin $*
+    press <keys>: ~builtin
     page <vdir>: press page$1
     finish: press q
     find: press slash
 
 thunderbird:
     auto-enable: { for-applications: thunderbird }
-    home|delete|escape|<vdir>: builtin press $0
-    next: builtin press f
+    press <keys>/text <word>: ~builtin
+    home|delete|escape|<vdir>: press $0
+    next: press f
     select <number>: keydown shift  press $1*down,up  keyup shift
-    <number> <direction>: builtin press $0*$1
+    <number> <direction>: press $0*$1
 
 firefox-navigate:
     <number>: builtin text $0  builtin mode firefox
@@ -133,8 +141,8 @@ firefox-navigate:
 
 firefox:
     auto-enable: { for-applications: firefox firefox-bin }
-    press <keys>/text <word>: builtin $*
-    home|escape|delete|<direction>|space: builtin press $0
+    press <keys>/text <word>: ~builtin
+    home|escape|delete|<direction>|space: press $0
     erase: press shift+home,delete
     small: press ctrl+0
     bigger: press ctrl+0,6*ctrl+shift+=
@@ -153,28 +161,31 @@ firefox:
     page <vdir>: press page$1
     <number> pages <vdir>: press $0*page$2
     fresh: press ctrl+t
-    previous: builtin press ctrl+pageup
-    next: builtin press ctrl+pagedown
+    previous: press ctrl+pageup
+    next: press ctrl+pagedown
 
 vim-find:
-    slash|backspace: builtin press $0
-    text <word>/press <keys>: builtin $*
-    go: builtin press enter  builtin mode vim
-    escape: builtin press escape  builtin mode vim
+    text <word>/press <keys>: ~builtin
+    slash|backspace: press $0
+    go: press enter  builtin mode vim
+    escape: press escape  builtin mode vim
     cancel: escape
-    delete word: builtin press ctrl+w
+    delete word: press ctrl+w
 
 vim-insert:
-    slash|space|semicolon|backspace|period|dollar|percent|colon: builtin press $0
-    escape: builtin press escape  builtin mode vim
+    press <keys>/text <word>: ~builtin
+    slash|space|semicolon|backspace|period|dollar|percent|colon: press $0
+    escape: press escape  builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
-    text <word>: builtin $*
+    text <word>: ~builtin
+    delete word: press ctrl+w
+    nope: delete word
 
 vim:
     auto-enable: { for-applications: vim }
+    press <keys>: ~builtin
     submode <word>: builtin mode vim-$1
-    press <keys>: builtin $*
-    escape|delete|enter|<direction>: builtin press $0
+    escape|delete|enter|<direction>: press $0
     page <vdir>: press page$1
     undo: press escape,u
     sorry: undo
@@ -183,10 +194,11 @@ vim:
     find <word>: press escape,slash builtin text $1 submode find
     find: press escape,slash submode find
     delete word: builtin text dw
-    <number> <direction>: builtin press $0*$1
+    delete line: builtin text dd
+    <number> <direction>: press $0*$1
     copy <number>: select $1  press ctrl+c
     paste <number>: go $1  press ctrl+v
-    select <number>: escape  press shift+v  text $1  press shift+g
+    select <number>: escape  press shift+v  builtin text $1  press shift+g
     start of file: press escape,g,g
     end of file: press escape,shift+g
     start of line: press home
@@ -205,13 +217,13 @@ vim:
 
 vlc:
     auto-enable: { for-applications: vlc }
-    press <keys>: builtin $*
+    press <keys>: ~builtin
     full screen: press f
     finish: press ctrl+q
 
-zsh:
+zsh (shell):
     auto-enable: { for-leaf-applications: zsh }
-    text <word>/press <keys>: builtin $*
+    text <word>/press <keys>: ~builtin
     do it: press enter
     again: press up,enter
     page <vdir>: press shift+page$1
@@ -222,17 +234,17 @@ zsh:
     revisions: text "gitk" press enter
     history: text history  press enter
     execute <number>: text !$1
-    delete word: builtin press ctrl+w
-    <direction>|space: builtin press $0
+    delete word: press ctrl+w
+    <direction>|space: press $0
     erase: press ctrl+u
 
-urxvt:
+urxvt (term):
     auto-enable: { for-applications: urxvt }
-    press <keys>: builtin $*
+    press <keys>: ~builtin
 
 gitk:
     auto-enable: { for-suffixes: ['- gitk'] }
-    press <keys>: builtin $*
+    press <keys>: ~builtin
     <vdir>: press $0
     <number> <vdir>: press $0*$1
     change <target>: focus change $1
@@ -241,7 +253,7 @@ gitk:
 
 orage:
     auto-enable: { for-applications: orage }
-    press <keys>: builtin $*
+    press <keys>: ~builtin
     finish: press ctrl+q
 
 <kube-obj-type>: pod|node|service|deployment
@@ -275,7 +287,7 @@ kubectl:
     get|describe|delete <kube-object>: computer in new shell run "unset LESS; kubectl $0 $1 $2 | less"
 
 arith-demo:
-    print <word>/return <word>: builtin $*
+    print <words>/return <word>: ~builtin
     # here, just for fun, we build arithmetic from +1 and -1.
     # this is currently too slow to be useful though, so elsewhere
     # we use built-ins.
@@ -292,30 +304,30 @@ arith-demo:
     <number> plus <number>: increment $($0 plus $(decrement $2))
 
     0 times <number>: return 0
-    <number> times <number>: $2 plus $($2 times $(decrement $0))
+    <positive> times <number>: $2 plus $($2 times $(decrement $0))
 
     <number> is less than 0: return false
-    0 is less than <number>: return true
-    <number> is less than <number>: lth $4 $(decrement $0)
-    lth <number> <number>: $2 is less than $(decrement $1)
+    0 is less than <positive>: return true
+    <number> is less than <positive>: $(decrement $0) is less than $(decrement $4)
 
     fibonacci 0: return 0
     fibonacci 1: return 1
     fibonacci <number>: $(fibonacci $($1 minus 1)) plus $(fibonacci $($1 minus 2))
 
+<order>:
+    - is less|greater than
+    - is equal|unequal to
+
+<arith-binop>: plus|minus|times
+
 calculate (calc):
-    print <word>/return <word>/<number> plus|minus|times <number>: builtin $*
-    <number> is less|greater than <number>: builtin $*
+    print <words>/return <word>/<number> <arith-binop>|<order> <number>: ~builtin
+    if <bool> <command> else <command>: ~control
 
     make <word> <word>: builtin set $1 $2
     value of <word>: builtin get $2
     increase <word> by <number>: make $1 $($(value of $1) plus $3)
     increment <word>: increase $1 by 1
 
-    <number> or <number> depending on whether true: return $0
-    <number> or <number> depending on whether false: return $2
-
-    maximum of <number> and <number>:
-        $4 or $2 depending on whether $($2 is less than $4)
-    minimum of <number> and <number>:
-        $2 or $4 depending on whether $($2 is less than $4)
+    maximum of <number> and <number>: if $($2 is less than $4) return $4 else return $2
+    minimum of <number> and <number>: if $($2 is less than $4) return $2 else return $4
