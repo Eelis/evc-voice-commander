@@ -60,15 +60,18 @@ def pstree_branch(pids, children, stop_on_terminal=False):
     import psutil
     r = {}
     for pid in pids:
-        pro = psutil.Process(pid)
-        name = pro.name()
-        if stop_on_terminal and name in terminal_apps: continue
-        b = (pstree_branch(children[pid], children, True) if pid in children else {})
-        b['name'] = name
-        try: b['cwd'] = pro.cwd()
-        except: pass
-        b['pid'] = pid
-        r[pid] = b
+        try:
+            pro = psutil.Process(pid)
+            name = pro.name()
+            if stop_on_terminal and name in terminal_apps: continue
+            b = (pstree_branch(children[pid], children, True) if pid in children else {})
+            b['name'] = name
+            try: b['cwd'] = pro.cwd()
+            except: pass
+            b['pid'] = pid
+            r[pid] = b
+        except psutil.NoSuchProcess:
+            pass
     return r
 
 def occurs_in_branch(x, processes):
