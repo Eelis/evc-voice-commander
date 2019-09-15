@@ -1,5 +1,6 @@
 import termcolor
 import subprocess
+import time
 import ecl
 import util
 import threading
@@ -87,6 +88,7 @@ extra_key_names = {
 builtin_types = {
     'word': lambda _: True,
     'number': lambda s: s.isdigit(),
+    'positive': lambda s: s.isdigit() and int(s) > 0,
     'job': lambda n: n.isdigit() and int(n) in jobs,
     'key': is_keyname,
     'keys': is_keyspec,
@@ -180,10 +182,6 @@ def release_key(_, key_name):
         import pyautogui
         pyautogui.keyUp(key_by_name(key_name))
 
-@make_builtin('nop')
-def cmd_nop(_ctx, _):
-    pass
-
 @make_builtin('shutdown commander')
 def cmd_exit(_ctx, _shutdown, _commander):
     sys.stdout.write("\033[?25h") # restore cursor
@@ -265,10 +263,7 @@ def cmd_options(ctx, _):
         l = []
         simples = []
         for pat, exp in modes[m].items():
-            if exp == 'builtin $*':
-                for form in pat.split('/'):
-                    simples.append(simple_pattern(form))
-            elif exp == 'builtin press $0':
+            if exp == 'builtin press $0': # todo
                 if len(pat.split()) == 1:
                     for alt in pat.split('|'):
                         simples.append(simple_pattern(alt))
@@ -303,10 +298,7 @@ def cmd_text(_ctx, _, s):
         import pyautogui
         pyautogui.press([c for c in s])
 
-@make_builtin('mode <mode>')
-def cmd_mode(_ctx, _, new_mode):
-    global mode
-    mode = new_mode
+builtin_commands['mode <mode>'] = (None, None)
 
 @make_functional_builtin('return <word>')
 def cmd_return(_ctx, _, w):
@@ -332,6 +324,6 @@ def cmd_press(_ctx, _, spec):
                 time.sleep(0.05)
                 for k in reversed(keys): release_key('release', k)
 
-@make_builtin('print <word>')
+@make_builtin('print <words>')
 def cmd_print(ctx, _, s):
-    print(ctx['ecl'].colored(s, 'magenta'))
+    print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))

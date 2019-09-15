@@ -1,2 +1,2 @@
 #!/bin/sh
-./listen-kaldi | ./execute
+./listen-kaldi | ./execute.py

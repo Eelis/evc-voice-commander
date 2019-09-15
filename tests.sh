@@ -20,11 +20,11 @@ function t() {
 ########################### TEST CASES: ###########################
 
 # repetition
-t computer 3 times print hello
-    #> nop, mode computer, print hello, mode computer, print hello, mode computer, print hello
-    #> hello
-    #> hello
-    #> hello
+t computer 3 times print hello world
+    #> nop, mode computer, print hello world, mode computer, print hello world, mode computer, print hello world
+    #> hello world
+    #> hello world
+    #> hello world
 
 # arithmetic
 t arith-demo fibonacci 7
@@ -54,10 +54,10 @@ t computer edit insert text bla escape
 # conditionals
 t calculate maximum of 2 and 9
     #> 9
-    #> mode control
+    #> mode calculate
 t calculate maximum of 9 and 2
     #> 9
-    #> mode control
+    #> mode calculate
 
 # quoting
 t computer say good morning

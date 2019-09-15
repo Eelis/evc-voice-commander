@@ -159,17 +159,18 @@ def get_suggestions(param, enums):
               for x in (get_suggestions_for_type(u[1:-1], enums) if u.startswith('<') else [u])]
 
 def eval_command(words, line):
-    global suggestions
+    global suggestions, mode
     if words == []: return
 
     handle_builtins = auto_enable_cfg[mode]['built-ins']
-
     enabled_modes = get_active_modes()
 
-    pr = eclc.match_command(words, enabled_modes, handle_builtins)
+    pr = eclc.match_commands(words, enabled_modes, handle_builtins)
     if pr.longest != 0:
-        suggestions = [y for x in pr.missing for y in get_suggestions(x, eclc.enums)]
+        suggestions = list(set([y for x in pr.missing for y in get_suggestions(x, eclc.enums)]))
     c = confirm_input(words, pr, line)
+    if pr.new_mode is not None:
+        mode = pr.new_mode
 
     if printactions:
         actnames = [' '.join(w) for _, w in pr.actions]
@@ -187,6 +188,8 @@ def eval_command(words, line):
 
     if c and prompt: util.clear_line()
     return pr.longest
+
+ignore_lines = ['', 'if']
 
 async def process_lines(input):
     import asyncio
@@ -216,7 +219,7 @@ async def process_lines(input):
             if not line: break # EOF
             else:
                 line = line.decode('utf-8').rstrip('\n')
-                if line == '' or line[0] == '#': continue
+                if line in ignore_lines or line[0] == '#': continue
 
                 try:
                     load_config()

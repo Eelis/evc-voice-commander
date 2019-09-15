@@ -14,8 +14,13 @@ def escape(s):
     return x
 
 def quote_if_necessary(s):
-    if ' ' not in s and '"' not in s: return s
-    return '"' + escape(s) + '"'
+    x = try_parse_braced_expr(s)
+    if x is not None:
+        _, rest = x
+        if rest == '': return s
+    if ' ' in s or '"' in s or '{' in s or '}' in s:
+        return '"' + escape(s) + '"'
+    return s
 
 ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
 def strip_markup(s):
@@ -70,7 +75,7 @@ def occurs_in_branch(x, processes):
     for k, v in processes.items():
         if k == 'name':
             if v == x: return True
-        elif occurs_in_branch(x, v):
+        elif type(v) is dict and occurs_in_branch(x, v):
             return True
     return False
 
@@ -78,34 +83,76 @@ def occurs_as_leaf_in_branch(x, processes):
     if len(processes) == 1 and 'name' in processes and processes['name'] == x:
         return True
     for k, v in processes.items():
-        if k != 'name' and occurs_as_leaf_in_branch(x, v):
+        if type(v) is dict and occurs_as_leaf_in_branch(x, v):
             return True
     return False
 
+def parse_quoted_string(s):
+    s = s[1:] # skip first "
+    x = ''
+    while not s.startswith('"'):
+        if s.startswith('\\"'):
+            x += '"'
+            s = s[2:]
+        elif s.startswith('\\\\'):
+            x += '\\'
+            s = s[2:]
+        else:
+            x += s[0]
+            s = s[1:]
+    s = s[1:] # skip final "
+    return (x, s)
+
+def parse_basic_expression(s):
+    curly_depth = 0
+    r = []
+    x = ''
+    while s != '':
+        if s[0] == ' ':
+            if curly_depth == 0: break
+            x += ' '
+            s = s[1:]
+        elif s[0] == '}':
+            if curly_depth == 0:
+                raise Exception("unmatched }")
+            curly_depth -= 1
+            x += '}'
+            s = s[1:]
+        elif s[0] == '{':
+            curly_depth += 1
+            x += '{'
+            s = s[1:]
+        elif s[0] == '"':
+            if curly_depth != 0: x += '"'
+            y, s = parse_quoted_string(s)
+            x += y
+            if curly_depth != 0: x += '"'
+        else:
+            x += s[0]
+            s = s[1:]
+    return (x, s)
+
+def try_parse_braced_expr(s):
+    if not s.startswith('{'):
+        return None
+    r = []
+    s = s[1:].lstrip()
+    while not s.startswith('}'):
+        if s == '': return None
+        y, s = parse_basic_expression(s)
+        if y == []: return None
+        r += [y]
+        s = s.lstrip()
+    return (r, s[1:])
+
 def split_expansion(s):
-    if s == '': return []
-    if s[0] == '"':
-        x = ''
-        i = 1
-        while s[i] != '"':
-            if s[i:].startswith('\\"'):
-                x += '"'
-                i += 2
-            elif s[i:].startswith('\\\\'):
-                x += '\\'
-                i += 2
-            else:
-                x += s[i]
-                i += 1
-        if i + 1 == len(s): return [x]
-        afterspace = i + 1
-        while s[afterspace] == ' ': afterspace += 1
-        return [x] + split_expansion(s[afterspace:])
-    space = s.find(' ')
-    if space == -1: return [s]
-    afterspace = space + 1
-    while afterspace < len(s) and s[afterspace] == ' ': afterspace += 1
-    return [s[:space]] + split_expansion(s[afterspace:])
+    s = s.lstrip()
+    r = []
+    while s != '':
+        y, s = parse_basic_expression(s)
+        r += [y]
+        s = s.lstrip()
+    return r
 
 def simple_subprocess(cmd):
     p = subprocess.Popen(cmd, shell=True,
