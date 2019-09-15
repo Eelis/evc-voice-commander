@@ -171,13 +171,13 @@ def cmd_restart(_ctx, _restart, _commander):
     os.execl(sys.argv[0], *sys.argv)
 
 @make_builtin('keydown <key>')
-def press_key(_, key_name):
+def cmd_keydown(_ctx, _keydown, key_name):
     if not dryrun:
         import pyautogui
         pyautogui.keyDown(key_by_name(key_name))
 
 @make_builtin('keyup <key>')
-def release_key(_, key_name):
+def cmd_keyup(_ctx, _keyup, key_name):
     if not dryrun:
         import pyautogui
         pyautogui.keyUp(key_by_name(key_name))
@@ -208,8 +208,8 @@ def cmd_less_than(_ctx, x, _is, _greater_, _than, y):
     return "true" if int(x) > int(y) else "false"
 
 @make_functional_builtin('enumindex <word> <word>')
-def cmd_enumindex(_ctx, _, e, v):
-    l = ecl.enums[e].split('/')
+def cmd_enumindex(ctx, _, e, v):
+    l = ctx['ecl'].enums[e].split('/')
     return l.index(v) if v in l else -1
 
 def print_builtin(e, pattern):
@@ -319,10 +319,11 @@ def cmd_press(_ctx, _, spec):
             k = key_by_name(keys[0])
             pyautogui.press([k] * times)
         else:
+            kk = list(map(key_by_name, keys))
             for i in range(times):
-                for k in keys: press_key('press', k)
+                for k in kk: pyautogui.keyDown(k)
                 time.sleep(0.05)
-                for k in reversed(keys): release_key('release', k)
+                for k in reversed(kk): pyautogui.keyUp(k)
 
 @make_builtin('print <words>')
 def cmd_print(ctx, _, s):
