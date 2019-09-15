@@ -17,6 +17,14 @@ duration:
     <number> minutes in seconds: calculate $0 times 60
     <number> hours in seconds: calculate $0 times 3600
 
+<file>:
+    forms: <word>
+    completions: find . -maxdepth 1 -type f -printf '%f\n'
+
+<directory>:
+    forms: <word>
+    completions: find . -maxdepth 1 -type d -printf '%f\n'
+
 # mode map (lets you refer to modes by another name):
 
 <ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster
@@ -66,18 +74,32 @@ computer (comp): # general commands
     kill <job>: builtin cancel job $1
     sleep seconds <number>: builtin execute sleep $2
     sleep <duration>: sleep seconds $(duration $1 in seconds)
+
+    # ways to run things:
     in <duration> <command>: builtin asynchronously sleep $1 $2
-    new browser: run firefox ; mode firefox
-    new terminal: run urxvt ; mode urxvt
-    screen grab: run flameshot gui
-    door: run cctv
     in new terminal run <words>: run urxvt -e $4
     in new shell run <words>: in new terminal run zsh --interactive -c "$4"
     in background shell run|execute <words>: builtin $3 zsh -c "$4"
+
+    # specific applications to run
     calendar: run orage
     job tree: in new shell run ps fax|less
     live jobs: in new shell run top
     say <words>: in background shell execute echo "(SayText \"$1\")" | festival
+    screen grab: run flameshot gui
+    door: run cctv
+    new browser: run firefox ; mode firefox
+    new terminal: run urxvt ; mode urxvt
+
+    # file ops:
+    modify <file>: in new terminal run vim "$1"
+    delete file <file>: run rm $2
+    show files: in new shell run unset LESS; ls -l | less -R
+
+    # vcs:
+    status of version: in new shell run unset LESS; git -c color.status=always status|less -R
+    make patch: in new terminal run git commit
+    revisions: run gitk
 
 <screen>: sheffield/manchester/liverpool
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm
@@ -126,7 +148,7 @@ less:
     finish: press q
     find: press slash
 
-thunderbird:
+thunderbird (mail):
     auto-enable: { for-applications: thunderbird }
     press <keys>/text <word>: ~builtin
     home|delete|escape|<vdir>: press $0
@@ -135,10 +157,10 @@ thunderbird:
     <number> <direction>: press $0*$1
 
 firefox-navigate:
-    <number>: builtin text $0  builtin mode firefox
+    <number>: builtin text $0 ; builtin mode firefox
     go: builtin press enter
 
-firefox:
+firefox (web):
     auto-enable: { for-applications: firefox firefox-bin }
     press <keys>/text <word>: ~builtin
     home|escape|delete|<direction>|space: press $0
@@ -176,7 +198,6 @@ vim-insert:
     slash|space|semicolon|backspace|period|dollar|percent|colon: press $0
     escape: press escape  builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
-    text <word>: ~builtin
     delete word: press ctrl+w
     nope: delete word
 
@@ -190,27 +211,29 @@ vim:
     sorry: undo
     redo: press escape,ctrl+r
     save: press ctrl+s
-    find <word>: press escape,slash builtin text $1 submode find
+    find <word>: press escape,slash builtin text $1 ; submode find
     find: press escape,slash submode find
     delete word: builtin text dw
     delete line: builtin text dd
     <number> <direction>: press $0*$1
     copy <number>: select $1  press ctrl+c
     paste <number>: go $1  press ctrl+v
-    select <number>: escape  press shift+v  builtin text $1  press shift+g
+    select <number>: escape  press shift+v  builtin text $1 ; press shift+g
     start of file: press escape,g,g
     end of file: press escape,shift+g
     start of line: press home
     end of line: press end
     next word: press w
     previous word: press b
+    next line: press down
+    previous line: press up
     new line: press o  submode insert
-    go <number>: escape  builtin text $1  press shift+g
+    go <number>: escape  builtin text $1 ; press shift+g
     next buffer: escape  press ctrl+end
     previous buffer: escape  press ctrl+home
     next match: escape  press n
     previous match: escape  press shift+n
-    finish: escape  builtin keydown shift  builtin text zz  builtin keyup shift
+    finish: escape  builtin keydown shift  builtin text zz ; builtin keyup shift
     refresh: press ctrl+l
     insert: press insert  submode insert
 
@@ -227,15 +250,17 @@ zsh (shell):
     again: press up,enter
     page <vdir>: press shift+page$1
     finish: press ctrl+d
-    change directory <word>: text "cd $2" press enter
-    directory up: text "cd .." press enter
-    directory back: text "cd -" press enter
-    revisions: text "gitk" press enter
-    history: text history  press enter
-    execute <number>: text !$1
+    change directory <directory>: text cd $2 ; press enter
+    directory up: text cd .. ; press enter
+    directory back: text cd - ; press enter
+    history: text history ; press enter
+    execute <number>: text "!$1" ; press enter
     delete word: press ctrl+w
     <direction>|space: press $0
     erase: press ctrl+u
+    status of version: text git -c color.status=always status|less ; press enter
+    show files: text ls -l ; press enter
+    clear screen: press ctrl+l
 
 urxvt (term):
     auto-enable: { for-applications: urxvt }
@@ -247,8 +272,12 @@ gitk:
     <vdir>: press $0
     <number> <vdir>: press $0*$1
     change <target>: focus change $1
-    kill: press ctrl+q
-    finish: kill
+    finish: press ctrl+q
+
+python-repl (python):
+    auto-enable: { for-leaf-applications: python3 }
+    press <keys>: ~builtin
+    finish: press ctrl+d
 
 orage:
     auto-enable: { for-applications: orage }
