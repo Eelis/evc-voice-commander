@@ -292,7 +292,7 @@ def cmd_options(ctx, _):
         s = l[-1]; l[-1] = s[:-2] # remove last comma
         print(util.indented_and_wrapped(l, indent), end='\n\n')
 
-@make_builtin('text <word>')
+@make_builtin('text <words>')
 def cmd_text(_ctx, _, s):
     if not dryrun:
         import pyautogui

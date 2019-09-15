@@ -217,31 +217,34 @@ async def process_lines(input):
                     print_prompt()
         else:
             if not line: break # EOF
-            else:
-                line = line.decode('utf-8').rstrip('\n')
-                if line in ignore_lines or line[0] == '#': continue
+            line = line.decode('utf-8').rstrip('\n')
+            if line in ignore_lines or line[0] == '#': continue
 
-                try:
-                    load_config()
-                except Exception as e:
-                    print("\nerror loading config:", e)
+            try:
+                load_config()
+            except Exception as e:
+                print("\nerror loading config:", e)
 
-                words = replace_numbers(replace_words(line.split()))
-                if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
-                    words.pop(0)
-                if words != []:
-                    if words[0] == 'continue': words = successful_input + words[1:]
-                    elif len(suggestions) == 1 and words == ['indeed']:
-                        words = successful_input + [suggestions[0]]
-                    elif suggestions != [] and len(words) == 2 and words[0] == 'indeed' and words[1].isdigit():
-                        i = int(words[1])
-                        if i < len(suggestions):
-                            words = successful_input + [suggestions[i]]
-                    longest = eval_command(words, line)
-                    if longest != 0:
-                        successful_input = words[:longest]
-                    if prompt: print_prompt()
-                    last_active_modes = get_active_modes()
+            words = replace_numbers(replace_words(line.split()))
+            if len(words) > 0 and words[0] in ['the', 'a', 'i', 'and']:
+                words.pop(0)
+            if words != []:
+                if words[0] == 'continue': words = successful_input + words[1:]
+                elif len(suggestions) == 1 and words == ['indeed']:
+                    words = successful_input + [suggestions[0]]
+                elif suggestions != [] and len(words) == 2 and words[0] == 'indeed' and words[1].isdigit():
+                    i = int(words[1])
+                    if i < len(suggestions):
+                        words = successful_input + [suggestions[i]]
+                longest = eval_command(words, line)
+                if longest != 0:
+                    successful_input = words[:longest]
+                elif "dictation" in eclc.script_vars and eclc.script_vars["dictation"] == "true":
+                    eval_command(
+                        ["builtin", "text"] + words,
+                        "builtin text " + line)
+                if prompt: print_prompt()
+                last_active_modes = get_active_modes()
 
 def short_mode_name(mode):
     return (short_mode_names[mode] if mode in short_mode_names else mode)
@@ -253,7 +256,10 @@ def prompt_string():
     if short_current != '': mm = [short_current]
     elif auto != []: mm = [current]
     mm += [s for s in list(map(short_mode_name, auto)) if s != '']
-    return ','.join(map(eclc.color_mode, mm)) + '> '
+    mm = list(map(eclc.color_mode, mm))
+    if "dictation" in eclc.script_vars and eclc.script_vars["dictation"] == "true":
+        mm.append('*')
+    return ','.join(mm) + '> '
 
 def print_prompt():
     print(prompt_string(), end='')
