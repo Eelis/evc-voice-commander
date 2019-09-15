@@ -52,7 +52,6 @@ control ():
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
     auto-enable:
         always: True
-        other-modes: False # if default mode is the current mode, don't enable other modes
         built-ins: False # don't recognize so-called 'global built-ins' (e.g. 'options')
     computer|focus: builtin mode $0
     <screen>: focus $0

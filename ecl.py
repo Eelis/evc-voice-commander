@@ -201,7 +201,7 @@ class Context():
 
     def match_alias(self, input, enabled_modes, input_modes):
         r = ParseResult((None, None, None, None))
-        for m in enabled_modes:
+        for m in (["default"] if enabled_modes[0] == "default" else enabled_modes):
             for pattern, exp in self.modes[m].items():
                 x = self.match_pattern(pattern, input, input_modes)
                 x.retval = (x.retval, m, exp, pattern)

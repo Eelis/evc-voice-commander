@@ -105,7 +105,6 @@ def load_config():
 
 def mode_is_auto_enabled(current_mode, candidate):
     c = auto_enable_cfg[current_mode]
-    if not c['other-modes']: return False
 
     c = auto_enable_cfg[candidate]
     if c['always']: return True
@@ -251,6 +250,7 @@ def short_mode_name(mode):
 
 def prompt_string():
     current, *auto = get_active_modes()
+    if current == 'default': auto = []
     short_current = short_mode_name(current)
     mm = []
     if short_current != '': mm = [short_current]
