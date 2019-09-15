@@ -317,6 +317,7 @@ class Context():
                     if r2.error is not None:
                         r.error = r2.error
                     if r2.longest != 0:
-                        r.new_mode = r2.new_mode
+                        if r2.new_mode is not None:
+                            r.new_mode = r2.new_mode
                         r.retval = r2.retval
         return r
