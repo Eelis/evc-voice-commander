@@ -21,7 +21,7 @@ function t() {
 
 # repetition
 t computer 3 times print hello world
-    #> nop, mode computer, print hello world, mode computer, print hello world, mode computer, print hello world
+    #> print hello world, print hello world, print hello world
     #> hello world
     #> hello world
     #> hello world
@@ -41,27 +41,24 @@ t focus,vim,term left
 # diagnostic for bad command
 t computer focus lol
     #> error: expected command
-    #> mode mode-map, mode focus
 
 # equally long but faulty match in non-current mode:
 t vim-find,vim go
-    #> press enter, mode vim
+    #> press enter
 
 # routing through mode map
 t computer edit insert text bla escape
-    #> mode mode-map, mode vim, press insert, mode vim-insert, text bla, press escape, mode vim
+    #> press insert, text bla, press escape
 
 # conditionals
 t calculate maximum of 2 and 9
     #> 9
-    #> mode calculate
 t calculate maximum of 9 and 2
     #> 9
-    #> mode calculate
 
 # quoting
 t computer say good morning
     #> execute zsh -c "echo \"(SayText \\\"good morning\\\")\" | festival"
 
 t computer 3 times say hello
-    #> nop, mode computer, execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", mode computer, execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", mode computer, execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival"
+    #> execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival"
