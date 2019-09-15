@@ -345,13 +345,12 @@ def noalsaerr():
 
 @contextmanager
 def hidden_cursor():
-    if sys.stdout.isatty() and prompt:
-        sys.stdout.write("\033[?25l") # hide cursor
+    b = not sys.stdin.isatty() and sys.stdout.isatty() and prompt
+    if b: sys.stdout.write("\033[?25l") # hide cursor
     try:
         yield
     finally:
-        if sys.stdout.isatty() and prompt:
-            sys.stdout.write("\033[?25h") # restore cursor
+        if b: sys.stdout.write("\033[?25h") # restore cursor
 
 @click.command()
 @click.option('--color', default=True, type=bool)
