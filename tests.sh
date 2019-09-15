@@ -27,7 +27,7 @@ t computer 3 times print hello world
     #> hello world
 
 # arithmetic
-t arith-demo fibonacci 7
+t computer arith-demo fibonacci 7
     #> 13
 
 # complex custom types (<target>)
@@ -35,7 +35,7 @@ t focus change next work space
     #> press wmkey+d, press wmkey+pagedown, press wmkey+a
 
 # current mode overrides auto-enabled modes
-t focus,vim,term left
+t --modes=focus,vim,term left
     #> press wmkey+left
 
 # diagnostic for bad command
@@ -43,17 +43,17 @@ t computer focus lol
     #> error: expected command
 
 # equally long but faulty match in non-current mode:
-t vim-find,vim go
+t --modes=vim-find,vim go
     #> press enter
 
 # routing through mode map
-t computer edit insert text bla escape
-    #> press insert, text bla, press escape
+t computer edit insert text bla
+    #> press insert, text bla
 
 # conditionals
-t calculate maximum of 2 and 9
+t computer calculate maximum of 2 and 9
     #> 9
-t calculate maximum of 9 and 2
+t computer calculate maximum of 9 and 2
     #> 9
 
 # quoting

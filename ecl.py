@@ -43,6 +43,7 @@ class Context():
         self.color = True
         self.builtin_commands = {}
         self.builtin_types = {}
+        self.always_on_modes = []
 
     def colored(self, s, c):     return termcolor.colored(s, c) if self.color else s
     def italic(self, s):         return util.italic(s) if self.color else s
@@ -278,6 +279,11 @@ class Context():
                     pr.missing = []
                 return pr
 
+        enabled_modes = [enabled_modes[0]] + [m for m in self.modes
+            if m != enabled_modes[0] and
+                (m in enabled_modes or (enabled_modes[0] != 'default' and m in self.always_on_modes))]
+                    # todo: don't hard-code 'default' here
+
         pr = self.match_alias(words, enabled_modes, enabled_modes)
         if handle_builtins and pr.error is None:
             pr.try_improve(self.match_builtin(words, enabled_modes, True))
@@ -294,9 +300,6 @@ class Context():
             r.actions = []
             r.new_mode = enabled_modes[0]
         else:
-            if r.new_mode is not None:
-                enabled_modes = enabled_modes.copy()
-                enabled_modes[0] = r.new_mode
             if r.longest != len(words) and r.error is None and r.missing == []:
                 w = words[r.longest:]
                 if w != [] and w[0] == ';':
@@ -304,6 +307,9 @@ class Context():
                     w = w[1:]
                     r.longest += 1
                 if w != []:
+                    if r.new_mode is not None:
+                        enabled_modes = enabled_modes.copy()
+                        enabled_modes[0] = r.new_mode
                     r2 = self.match_commands(w, enabled_modes, True, stop_on_semicolon)
                     r.longest += r2.longest
                     r.missing = r2.missing

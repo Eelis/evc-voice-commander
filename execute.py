@@ -24,7 +24,6 @@ eclc.builtin_commands = eclbuiltins.builtin_commands
 eclc.builtin_types = eclbuiltins.builtin_types
 short_mode_names = {}
 auto_enable_cfg = {}
-explicitly_autoenabled = []
 
 # options:
 prompt = True
@@ -37,7 +36,7 @@ current_windowtitle = ''
 current_windowprocesses = {}
 
 # evc state:
-mode = None
+mode = 'default'
 completions = {}
 suggestions = []
 
@@ -85,6 +84,7 @@ def load_config():
     modes = dict([(remove_shortname(m), a) for m, a in modes.items()])
 
     # handle auto-enabling:
+    eclc.always_on_modes = []
     for mode, aliases in modes.items():
         cfg = {}
         if 'auto-enable' in aliases:
@@ -99,13 +99,13 @@ def load_config():
         if 'for-suffixes' not in cfg: cfg['for-suffixes'] = []
         auto_enable_cfg[mode] = cfg
 
+        if cfg['always']: eclc.always_on_modes.append(mode)
+
     eclc.modes = modes
 
 def mode_is_auto_enabled(current_mode, candidate):
     c = auto_enable_cfg[current_mode]
     if not c['other-modes']: return False
-
-    if candidate in explicitly_autoenabled: return True
 
     c = auto_enable_cfg[candidate]
     if c['always']: return True
@@ -158,12 +158,11 @@ def get_suggestions(param, enums):
     return [x for u in ecl.alternatives(param)
               for x in (get_suggestions_for_type(u[1:-1], enums) if u.startswith('<') else [u])]
 
-def eval_command(words, line):
+def eval_command(words, line, enabled_modes):
     global suggestions, mode
     if words == []: return
 
     handle_builtins = auto_enable_cfg[mode]['built-ins']
-    enabled_modes = get_active_modes()
 
     pr = eclc.match_commands(words, enabled_modes, handle_builtins)
     if pr.longest != 0:
@@ -236,13 +235,14 @@ async def process_lines(input):
                     i = int(words[1])
                     if i < len(suggestions):
                         words = successful_input + [suggestions[i]]
-                longest = eval_command(words, line)
+
+                enabled_modes = get_active_modes()
+                longest = eval_command(words, line, enabled_modes)
                 if longest != 0:
                     successful_input = words[:longest]
                 elif "dictation" in eclc.script_vars and eclc.script_vars["dictation"] == "true":
-                    eval_command(
-                        ["builtin", "text"] + words,
-                        "builtin text " + line)
+                    eval_command(["builtin", "text"] + words, "builtin text " + line,
+                        enabled_modes)
                 if prompt: print_prompt()
                 last_active_modes = get_active_modes()
 
@@ -356,22 +356,19 @@ def hidden_cursor():
 @click.command()
 @click.option('--color', default=True, type=bool)
 @click.option('--prompt', default=True, type=bool)
+@click.option('--modes', default='default', type=str)
 @click.option('--printactions', default=False, type=bool, is_flag=True)
 @click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False, type=bool, is_flag=True)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
-@click.argument('mode', nargs=1, default='default')
 @click.argument('cmd', nargs=-1)
-def evc(color, prompt, printactions, configdir, dryrun, volume, mode, cmd):
-    global sound_effects, explicitly_autoenabled
+def evc(color, prompt, modes, printactions, configdir, dryrun, volume, cmd):
+    global sound_effects
 
-    mm = mode.split(',')
-    explicitly_autoenabled = mm[1:]
-    mode = mm[0]
+    modes = modes.split(',')
 
-    globals()['mode'] = mode
     globals()['color'] = color
     eclc.color = color
     globals()['configdir'] = configdir
@@ -396,7 +393,7 @@ def evc(color, prompt, printactions, configdir, dryrun, volume, mode, cmd):
     with noalsaerr():
         with hidden_cursor():
             if initial_words != []:
-                eval_command(initial_words, ' '.join(initial_words))
+                eval_command(initial_words, ' '.join(initial_words), modes)
             else:
                 import asyncio
                 asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
