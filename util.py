@@ -82,6 +82,13 @@ def occurs_in_branch(x, processes):
             return True
     return False
 
+def cwd_of_branch(processes):
+    for v in processes.values():
+        if type(v) is dict:
+            t = cwd_of_branch(v)
+            if t is not None: return t
+    return (processes['cwd'] if 'cwd' in processes else None)
+
 def occurs_as_leaf_in_branch(x, processes):
     children = False
     for v in processes.values():
@@ -184,10 +191,10 @@ def italic(s):
     turn_off_italic = "\x1B[23m"
     return turn_on_italic + s + turn_off_italic
 
-def sound(name, count=1, wait=True):
+def sound(path, count=1, wait=True):
     if count == 0: return
     import pygame
-    pygame.mixer.music.load("sounds/" + name)
+    pygame.mixer.music.load(path)
     for i in range(0, count):
         pygame.mixer.music.play()
         if wait:
@@ -207,9 +214,9 @@ def get_current_application():
     current_windowtitle = ''
     current_windowprocesses = {}
     active_win = simple_subprocess('xdotool getactivewindow')
-    if active_win == '': return
-    current_windowtitle = simple_subprocess('xdotool getwindowname ' + active_win)
-    current_windowpid = simple_subprocess('xdotool getwindowpid ' + active_win)
-    if current_windowpid != '':
-        current_windowprocesses = process_family(int(current_windowpid))
+    if active_win != '':
+        current_windowtitle = simple_subprocess('xdotool getwindowname ' + active_win)
+        current_windowpid = simple_subprocess('xdotool getwindowpid ' + active_win)
+        if current_windowpid != '':
+            current_windowprocesses = process_family(int(current_windowpid))
     return (current_windowtitle, current_windowprocesses)

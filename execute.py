@@ -166,6 +166,7 @@ def eval_command(words, line, enabled_modes):
     pr = eclc.match_commands(words, enabled_modes, handle_builtins)
     if pr.longest != 0:
         suggestions = list(set([y for x in pr.missing for y in get_suggestions(x, eclc.enums)]))
+        suggestions.sort()
     c = confirm_input(words, pr, line)
     if pr.new_mode is not None:
         mode = pr.new_mode
@@ -207,6 +208,10 @@ async def process_lines(input):
             line = await asyncio.wait_for(reader.readline(), 0.5)
         except asyncio.TimeoutError:
             current_windowtitle, current_windowprocesses = util.get_current_application()
+            x = util.cwd_of_branch(current_windowprocesses)
+            if x is not None:
+                try: os.chdir(x)
+                except FileNotFoundError: pass
             m = get_active_modes()
             if last_active_modes != m:
                 last_active_modes = m
@@ -265,6 +270,10 @@ def print_prompt():
     print(prompt_string(), end='')
     sys.stdout.flush()
 
+def sound(s, n, wait=True):
+    if sound_effects:
+        util.sound(appdir + '/sounds/' + s + '.wav', n, wait)
+
 def confirm_input(words, pr, original_input):
     n = pr.longest
     cols = shutil.get_terminal_size().columns
@@ -282,9 +291,8 @@ def confirm_input(words, pr, original_input):
     if pr.error is not None:
         print()
         print(colored('error:', 'red'), pr.error)
-        if sound_effects:
-            util.sound('good.wav', n)
-            util.sound('bad.wav', 1, wait=False)
+        sound('good', n)
+        sound('bad', 1, wait=False)
         return False
 
     if prompt:
@@ -308,24 +316,19 @@ def confirm_input(words, pr, original_input):
             if len(suggestions) == 1 and not suggestions[0].startswith('<'):
                 print(colored("error: did you mean '" + suggestions[0] + "'?", 'red'))
             else:
-                print(colored("did you perhaps mean:", 'red'))
+                print(colored("did you mean:", 'red'))
                 rows = shutil.get_terminal_size().lines
                 for i, s in enumerate(suggestions[:rows - 3]):
-                    print('-', s + '?', '(' + str(i) + ')')
+                    print('-', s, '(' + str(i) + ')')
         else:
             what = ' or '.join(map(eclc.italic_types, list(set(pr.missing))))
             problem = ('missing' if n == len(words) else 'expected')
             print(colored('error: ' + problem + ' ' + what, 'red'))
 
-    if sound_effects:
-        util.sound('good.wav', n)
-        if n != len(words) or pr.missing != []:
-            util.sound('bad.wav', 1, wait=False)
+    sound('good', n)
+    if n != len(words) or pr.missing != []:
+        sound('bad', 1, wait=False)
     return True
-
-def get_current_application():
-    global current_windowtitle, current_windowprocesses
-    current_windowtitle, current_windowprocesses = util.get_current_application()
 
 ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
 
@@ -357,13 +360,14 @@ def hidden_cursor():
 @click.option('--prompt', default=True, type=bool)
 @click.option('--modes', default='default', type=str)
 @click.option('--printactions', default=False, type=bool, is_flag=True)
+@click.option('--appdir', default=os.getenv('PWD'),type=str)
 @click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False, type=bool, is_flag=True)
 @click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
                                                    # (a) non-obnoxious, and
                                                    # (b) won't interfere with speech recognition.
 @click.argument('cmd', nargs=-1)
-def evc(color, prompt, modes, printactions, configdir, dryrun, volume, cmd):
+def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, cmd):
     global sound_effects
 
     modes = modes.split(',')
@@ -371,6 +375,7 @@ def evc(color, prompt, modes, printactions, configdir, dryrun, volume, cmd):
     globals()['color'] = color
     eclc.color = color
     globals()['configdir'] = configdir
+    globals()['appdir'] = appdir
     eclc.script_vars['configdir'] = configdir
     eclbuiltins.dryrun = dryrun
     globals()['prompt'] = prompt
