@@ -220,3 +220,6 @@ def get_current_application():
         if current_windowpid != '':
             current_windowprocesses = process_family(int(current_windowpid))
     return (current_windowtitle, current_windowprocesses)
+
+def ordinal(s):
+    return "first second third fourth fifth sixth seventh eighth ninth tenth eleventh".split().index(s)

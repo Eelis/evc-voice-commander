@@ -190,6 +190,14 @@ def eval_command(words, line, enabled_modes):
 
 ignore_lines = ['', 'if']
 
+def maybe_pick_suggestion(words):
+    i = -1
+    if len(suggestions) == 1 and words == ['yes']: i = 0
+    if len(words) == 3 and words[:2] == ["yes", "the"]: i = util.ordinal(words[2])
+    if len(words) == 2 and words[0] == 'yes' and words[1].isdigit():
+        i = int(words[1]) - 1
+    return (i if 0 <= i and i < len(suggestions) else None)
+
 async def process_lines(input):
     import asyncio
     global mode, current_windowtitle, current_windowprocesses
@@ -234,12 +242,9 @@ async def process_lines(input):
                 words.pop(0)
             if words != []:
                 if words[0] == 'continue': words = successful_input + words[1:]
-                elif len(suggestions) == 1 and words == ['indeed']:
-                    words = successful_input + [suggestions[0]]
-                elif suggestions != [] and len(words) == 2 and words[0] == 'indeed' and words[1].isdigit():
-                    i = int(words[1])
-                    if i < len(suggestions):
-                        words = successful_input + [suggestions[i]]
+                else:
+                    p = maybe_pick_suggestion(words)
+                    if p is not None: words = successful_input + [suggestions[p]]
 
                 enabled_modes = get_active_modes()
                 longest = eval_command(words, line, enabled_modes)
@@ -320,7 +325,7 @@ def confirm_input(words, pr, original_input):
                 print(colored("did you mean:", 'red'))
                 rows = shutil.get_terminal_size().lines
                 for i, s in enumerate(suggestions[:rows - 3]):
-                    print('-', s, '(' + str(i) + ')')
+                    print('-', s, '(' + str(i + 1) + ')')
         else:
             what = ' or '.join(map(eclc.italic_types, list(set(pr.missing))))
             problem = ('missing' if n == len(words) else 'expected')
