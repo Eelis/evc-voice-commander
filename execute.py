@@ -212,6 +212,7 @@ async def process_lines(input):
             if x is not None:
                 try: os.chdir(x)
                 except FileNotFoundError: pass
+                except PermissionError: pass
             m = get_active_modes()
             if last_active_modes != m:
                 last_active_modes = m
