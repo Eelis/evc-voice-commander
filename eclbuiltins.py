@@ -24,12 +24,6 @@ def make_functional_builtin(pattern):
         return g
     return f
 
-def is_global_builtin_pattern(pat):
-    pat = pat.split()
-    while pat != [] and pat[0][0] == '<':
-        pat = pat[1:]
-    return pat != [] and pat[0] in ecl.global_builtins
-
 def key_by_name(name):
     return (extra_key_names[name] if name in extra_key_names else name)
 
@@ -288,7 +282,7 @@ def cmd_options(ctx, _):
             s = l[-1]; l[-1] = s[:-2] # remove last comma
             print(util.indented_and_wrapped(l, indent), end='\n\n')
 
-    l = [e.italic_types(b) + ', ' for b in builtin_commands.keys() if is_global_builtin_pattern(b)]
+    l = [e.italic_types(b) + ', ' for b in builtin_commands.keys() if ecl.is_global_builtin_pattern(b)]
     if l != []:
         print('global: ', end='')
         indent = len('global: ')
