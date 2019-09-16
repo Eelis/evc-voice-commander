@@ -316,6 +316,7 @@ class Context():
                 if w != [] and w[0] == ';':
                     if stop_on_semicolon: return r
                     w = w[1:]
+                    r.resolved.append(';')
                     r.longest += 1
                 if w != []:
                     if r.new_mode is not None:
