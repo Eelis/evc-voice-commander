@@ -9,6 +9,7 @@ class ParseResult():
         self.new_mode = None
         self.error = None
         self.retval = retval
+        self.resolved = []
 
     def try_improve(self, other):
         if other.longest == self.longest:
@@ -24,6 +25,7 @@ class ParseResult():
             self.new_mode = other.new_mode
             self.error = other.error
             self.retval = other.retval
+            self.resolved = other.resolved
 
 def is_global_builtin_pattern(pat):
     global_builtins = ['options', 'define', 'builtin']
@@ -107,8 +109,8 @@ class Context():
         if param == '<command>':
             x = self.match_commands(args, enabled_modes, True, True)
             consumed = list(map(util.quote_if_necessary, args[:x.longest]))
-            if consumed[:3] != ['{', 'builtin', 'mode']:
-                consumed = ['{', 'builtin', 'mode', enabled_modes[0]] + consumed + ['}']
+            if x.resolved != None: consumed = ['{'] + x.resolved + ['}']
+                # todo: only if necessary
             x.retval = (args[x.longest:], [' '.join(consumed)], i + 1)
             x.actions = []
             return x
@@ -211,11 +213,13 @@ class Context():
         if r.longest == 0 or r.missing != []: return r
         vars, m, expansion, pattern = r.retval
 
+        r.resolved = ['{', 'builtin', 'mode', m] + vars + ['}']
+
         if expansion == '~builtin':
             return self.match_builtin(input, enabled_modes, False)
         if expansion.startswith('~'):
             mod = expansion[1:]
-            return self.match_alias(input, [mod], enabled_modes)
+            return self.match_alias(input, [mod], input_modes)
 
         errorpart = 'command ' + self.colored(' '.join(map(util.quote_if_necessary, input[:r.longest])), 'green') + \
             ' matched alias:\n  ' + self.alias_definition_str(m, pattern, 4) + '\n'
@@ -247,6 +251,8 @@ class Context():
                 r.try_improve(y)
         vars, f, act, pattern = r.retval
         r.retval = None
+        if vars != None:
+            r.resolved = ['builtin'] + vars
         if r.longest != 0 and r.missing == []:
             if f is not None:
                 ctx = {'enabled_modes': enabled_modes, 'ecl': self}
@@ -312,6 +318,7 @@ class Context():
                         enabled_modes[0] = r.new_mode
                     r2 = self.match_commands(w, enabled_modes, True, stop_on_semicolon)
                     r.longest += r2.longest
+                    r.resolved += r2.resolved
                     r.missing = r2.missing
                     r.actions += r2.actions
                     if r2.error is not None:
@@ -320,4 +327,5 @@ class Context():
                         if r2.new_mode is not None:
                             r.new_mode = r2.new_mode
                         r.retval = r2.retval
+
         return r
