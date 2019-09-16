@@ -191,15 +191,16 @@ vim-find:
     go: press enter  builtin mode vim
     escape: press escape  builtin mode vim
     cancel: escape
-    delete word: press ctrl+w
+    delete last word: press ctrl+w
+    correction: delete last word
 
 vim-insert:
     press <keys>/text <word>: ~builtin
     slash|space|semicolon|backspace|period|dollar|percent|colon: press $0
     escape: press escape  builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
-    delete word: press ctrl+w
-    nope: delete word
+    delete last word: press ctrl+w
+    correction: delete last word
 
 vim:
     auto-enable: { for-applications: vim }
@@ -225,6 +226,7 @@ vim:
     end of line: press end
     next word: press w
     previous word: press b
+    delete last word: previous word delete word
     next line: press down
     previous line: press up
     new line: press o  submode insert
@@ -255,12 +257,14 @@ zsh (shell):
     directory back: text cd - ; press enter
     history: text history ; press enter
     execute <number>: text "!$1" ; press enter
-    delete word: press ctrl+w
+    delete last word: press ctrl+w
+    correction: delete last word
     <direction>|space: press $0
     erase: press ctrl+u
     status of version: text git -c color.status=always status|less ; press enter
     show files: text ls -l ; press enter
     clear screen: press ctrl+l
+    modify <file>: ~computer
 
 urxvt (term):
     auto-enable: { for-applications: urxvt }
