@@ -166,8 +166,11 @@ def cmd_execute(ctx, _, cmd):
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
     cmd_print(ctx, 'print', output)
 
+startup_cwd = os.getcwd()
+
 @make_builtin('restart commander')
 def cmd_restart(_ctx, _restart, _commander):
+    os.chdir(startup_cwd)
     os.execl(sys.argv[0], *sys.argv)
 
 @make_builtin('keydown <key>')
