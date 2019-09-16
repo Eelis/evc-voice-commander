@@ -138,6 +138,7 @@ class Context():
             x = self.match_parameter(params[i], args, enabled_modes, i)
             pr.longest += x.longest
             if x.longest != 0: pr.missing = x.missing
+            if x.error is not None: pr.error = x.error
             if x.retval is None or x.longest == 0: break
             args, vars_here, i = x.retval
             pr.retval += vars_here
