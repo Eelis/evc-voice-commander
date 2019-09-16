@@ -204,6 +204,10 @@ def cmd_less_than(_ctx, x, _is, _less, _than, y):
 def cmd_less_than(_ctx, x, _is, _greater_, _than, y):
     return "true" if int(x) > int(y) else "false"
 
+@make_functional_builtin('<word> equals <word>')
+def cmd_equals(_ctx, x, _equals, y):
+    return "true" if x == y else "false"
+
 @make_functional_builtin('enumindex <word> <word>')
 def cmd_enumindex(ctx, _, e, v):
     l = ctx['ecl'].enums[e].split('/')
