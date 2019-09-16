@@ -40,7 +40,6 @@ mode = 'default'
 completions = {}
 suggestions = []
 
-
 def colored(s, c):
     if not color: return s
     return termcolor.colored(s, c)
@@ -103,9 +102,9 @@ def load_config():
 
     eclc.modes = modes
 
-def mode_is_auto_enabled(current_mode, candidate):
-    c = auto_enable_cfg[current_mode]
-
+cmdline_modes = []
+def mode_is_auto_enabled(candidate):
+    if candidate in cmdline_modes: return True
     c = auto_enable_cfg[candidate]
     if c['always']: return True
     for app in c['for-applications']:
@@ -119,8 +118,12 @@ def mode_is_auto_enabled(current_mode, candidate):
     return False
 
 def get_active_modes():
-    return [mode] + [m for m in eclc.modes if m != mode and mode_is_auto_enabled(mode, m)]
+    return [mode] + [m for m in eclc.modes if m != mode and mode_is_auto_enabled(m)]
         # important: mode itself comes first
+
+@eclbuiltins.make_functional_builtin('get active modes')
+def cmd_get_active_modes(*_):
+    return ' '.join(get_active_modes())
 
 def color_mode(m): return colored(m, 'cyan')
 
@@ -376,9 +379,10 @@ def hidden_cursor():
     # (b) won't interfere with speech recognition.
 @click.argument('cmd', nargs=-1)
 def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, cmd):
-    global sound_effects
+    global sound_effects, cmdline_modes
 
-    modes = modes.split(',')
+    cmdline_modes = modes.split(',')
+    modes = cmdline_modes
 
     globals()['color'] = color
     eclc.color = color

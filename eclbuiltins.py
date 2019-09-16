@@ -301,10 +301,6 @@ builtin_commands['mode <mode>'] = (None, None)
 def cmd_return(_ctx, _, w):
     return w
 
-@make_functional_builtin('active <mode>')
-def cmd_active(ctx, _, m):
-    return "true" if m in ctx['enabled_modes'] else "false"
-
 @make_builtin('press <keys>')
 def cmd_press(_ctx, _, spec):
     if dryrun: return
