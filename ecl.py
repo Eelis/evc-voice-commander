@@ -276,20 +276,6 @@ class Context():
         return r
 
     def match_command(self, words, enabled_modes, handle_builtins=True):
-        x = util.try_parse_braced_expr(words[0])
-        if x is not None:
-            sub, more = x
-            if more == '':
-                pr = self.match_commands(sub, enabled_modes, handle_builtins, False)
-                if pr.longest == len(sub) and pr.error is None and pr.missing == []:
-                    pr.longest = 1
-                else:
-                    if pr.error is None:
-                        pr.error = self.describe_cmd_parse_result(pr, sub)
-                    pr.longest = 0
-                    pr.missing = []
-                return pr
-
         enabled_modes = [enabled_modes[0]] + [m for m in self.modes
             if m != enabled_modes[0] and
                 (m in enabled_modes or (enabled_modes[0] != 'default' and m in self.always_on_modes))]
@@ -303,6 +289,20 @@ class Context():
     def match_commands(self, words, enabled_modes, handle_builtins=True, stop_on_semicolon=False):
         if words == [] or words[:1] == ['}']:
             return ParseResult()
+
+        x = util.try_parse_braced_expr(words[0])
+        if x is not None:
+            sub, more = x
+            if more == '':
+                pr = self.match_commands(sub, enabled_modes, handle_builtins, False)
+                if pr.longest == len(sub) and pr.error is None and pr.missing == []:
+                    pr.longest = 1
+                else:
+                    if pr.error is None:
+                        pr.error = self.describe_cmd_parse_result(pr, sub)
+                    pr.longest = 0
+                    pr.missing = []
+                return pr
 
         r = self.match_command(words, enabled_modes, handle_builtins)
         if r.longest == 0:

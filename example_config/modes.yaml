@@ -27,7 +27,7 @@ duration:
 
 # mode map (lets you refer to modes by another name):
 
-<ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster
+<ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster|container
 mode-map:
     mode <ext-mode>: builtin mode $($1)
     return <ext-mode>: builtin return $1
@@ -39,6 +39,7 @@ mode-map:
     terminal: return urxvt
     shell: return zsh
     cluster: return kubectl
+    container: return docker
 
 # control structures
 
@@ -55,6 +56,13 @@ control ():
     start dictation|dictating: builtin set dictation true
     stop dictation|dictating: builtin set dictation false
 
+    false or false: builtin return false
+    true or <bool>: builtin return true
+    <bool> or true: builtin return true
+
+    word <word> is among <word>: builtin $1 equals $4
+    word <word> is among <word> <words>: $(builtin $1 equals $4) or $(word $1 is among $5)
+
 # main modes:
 
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
@@ -67,7 +75,7 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
 
 computer (comp): # general commands
     <ext-mode>: builtin mode mode-map mode $0
-    print <words>/press <keys>/run <words>: ~builtin
+    print <words>/press <keys>/run <words>/text <words>: ~builtin
     restart commander/shutdown commander/jobs/mode <mode>/window processes: ~builtin
     change commands: in new terminal run vim "$configdir/modes.yaml"
     change replacements: in new terminal run vim "$configdir/replacements.yaml"
@@ -83,7 +91,7 @@ computer (comp): # general commands
 
     # specific applications to run
     calendar: run orage
-    job tree: in new shell run ps fax|less
+    job tree: in new shell run ps fax | less
     live jobs: in new shell run top
     say <words>: in background shell execute echo "(SayText \"$1\")" | festival
     screen grab: run flameshot gui
@@ -91,17 +99,33 @@ computer (comp): # general commands
     new browser: run firefox ; mode firefox
     new terminal: run urxvt ; mode urxvt
 
+    if in shell <command> else <command>:
+        if $(word zsh is among $(builtin get active modes)) $3 else $5
+
     # file ops:
-    modify <file>: in new terminal run vim "$1"
-    delete file <file>: run rm $2
-    show files: in new shell run unset LESS; ls -l | less -R
+    modify <file>:
+        if in shell { text vim "$1" ; press enter }
+        else in new terminal run vim "$1"
+    delete file <file>:
+        if in shell { text rm "$2" ; press enter }
+        else run rm "$2"
+    show files:
+        if in shell { text ls -l ; press enter }
+        else { in new shell run unset LESS; ls -l | less -r }
 
     # vcs:
-    status of version: in new shell run unset LESS; git -c color.status=always status|less -R
-    make patch: in new terminal run git commit
+    status of version:
+        if in shell { text git -c color.status=always status ; press enter }
+        else { in new shell run unset LESS; git -c color.status=always status | less -r }
+    make patch:
+        if in shell { text git commit ; press enter }
+        else in new terminal run git commit
+    index file <file>:
+        if in shell { text git add $2 ; press enter }
+        else in new terminal run git add $2
     revisions: run gitk
 
-<screen>: sheffield/manchester/liverpool
+<screen>: mexico/germany/india
     # the order here matters, because 'focus <screen>' passes the enumindex to the wm
 <wm-object>: window/tab/frame/screen/work space
 <target>:
@@ -117,7 +141,7 @@ focus: # wm commands
 
     mark: press wmkey+d
     attach: press wmkey+a
-    change <target>: mark $1 attach
+    change to <target>: mark $2 attach
     close: press wmkey+c
     kill: press wmkey+c
     split <direction>: press wmkey+s,$1
@@ -261,10 +285,9 @@ zsh (shell):
     correction: delete last word
     <direction>|space: press $0
     erase: press ctrl+u
-    status of version: text git -c color.status=always status|less ; press enter
-    show files: text ls -l ; press enter
+    status of version/make patch/index file <file>: ~computer
+    show files/modify <file>: ~computer
     clear screen: press ctrl+l
-    modify <file>: ~computer
 
 urxvt (term):
     auto-enable: { for-applications: urxvt }
@@ -282,6 +305,9 @@ python-repl (python):
     auto-enable: { for-leaf-applications: python3 }
     press <keys>: ~builtin
     finish: press ctrl+d
+
+docker:
+    list: computer in new shell run unset LESS; docker ps | less -r
 
 orage:
     auto-enable: { for-applications: orage }

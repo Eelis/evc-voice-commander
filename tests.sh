@@ -31,7 +31,7 @@ t computer arith-demo fibonacci 7
     #> 13
 
 # complex custom types (<target>)
-t focus change next work space
+t focus change to next work space
     #> press wmkey+d, press wmkey+pagedown, press wmkey+a
 
 # current mode overrides auto-enabled modes
@@ -65,3 +65,9 @@ t computer 3 times say hello
 
 t computer vim 3 times delete last word
     #> press b, text dw, press b, text dw, press b, text dw
+
+t --modes=zsh computer show files
+    #> text ls -l, press enter
+
+t computer show files
+    #> run urxvt -e zsh --interactive -c "unset LESS; ls -l | less -r"
