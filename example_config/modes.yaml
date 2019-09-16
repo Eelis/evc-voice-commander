@@ -63,7 +63,7 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
         built-ins: False # don't recognize so-called 'global built-ins' (e.g. 'options')
     computer|focus: builtin mode $0
     <screen>: focus $0
-    stop: builtin mode default
+    stop: builtin set dictation false builtin mode default
 
 computer (comp): # general commands
     <ext-mode>: builtin mode mode-map mode $0
