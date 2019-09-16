@@ -109,9 +109,13 @@ class Context():
         if param == '<command>':
             x = self.match_commands(args, enabled_modes, True, True)
             consumed = list(map(util.quote_if_necessary, args[:x.longest]))
-            if x.resolved != None: consumed = ['{'] + x.resolved + ['}']
+            if x.longest == 0:
+                x.missing = ['<command>']
+                x.retval = None
+            elif x.resolved != None:
+                consumed = ['{'] + x.resolved + ['}']
                 # todo: only if necessary
-            x.retval = (args[x.longest:], [' '.join(consumed)], i + 1)
+                x.retval = (args[x.longest:], [' '.join(consumed)], i + 1)
             x.actions = []
             return x
         if param == '<words>':
@@ -134,7 +138,7 @@ class Context():
             x = self.match_parameter(params[i], args, enabled_modes, i)
             pr.longest += x.longest
             if x.longest != 0: pr.missing = x.missing
-            if x.retval is None: break
+            if x.retval is None or x.longest == 0: break
             args, vars_here, i = x.retval
             pr.retval += vars_here
         if i < len(params) and pr.missing == []:

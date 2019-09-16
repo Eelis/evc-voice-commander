@@ -62,3 +62,6 @@ t computer say good morning
 
 t computer 3 times say hello
     #> execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival"
+
+t computer vim 3 times delete last word
+    #> press b, text dw, press b, text dw, press b, text dw
