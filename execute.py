@@ -361,12 +361,14 @@ def hidden_cursor():
 @click.option('--prompt', default=True, type=bool)
 @click.option('--modes', default='default', type=str)
 @click.option('--printactions', default=False, type=bool, is_flag=True)
-@click.option('--appdir', default=os.getenv('PWD'),type=str)
+@click.option('--appdir', default=os.getenv('PWD'), type=str)
 @click.option('--configdir', default=os.getenv('HOME') + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False, type=bool, is_flag=True)
-@click.option('--volume', default=0.1, type=float) # default volume very low so our beeps are
-                                                   # (a) non-obnoxious, and
-                                                   # (b) won't interfere with speech recognition.
+@click.option('--volume', default=(0 if sys.stdin.isatty() else 0.1), type=float)
+    # stdin not being a tty is interpreted to mean the input is coming
+    # from speech, hence we enable sound, but with low volume so our beeps are
+    # (a) non-obnoxious, and
+    # (b) won't interfere with speech recognition.
 @click.argument('cmd', nargs=-1)
 def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, cmd):
     global sound_effects
