@@ -134,6 +134,7 @@ computer (comp): # general commands
     - frame <number>
     - <nextprev> <wm-object>
     - new work space
+    - <number> times <target>
 
 focus: # wm commands
     press <keys>: ~builtin
@@ -141,7 +142,7 @@ focus: # wm commands
 
     mark: press wmkey+d
     attach: press wmkey+a
-    change to <target>: mark $2 attach
+    change <target>: mark { $1 } attach
     close: press wmkey+c
     kill: press wmkey+c
     split <direction>: press wmkey+s,$1

@@ -31,7 +31,7 @@ t computer arith-demo fibonacci 7
     #> 13
 
 # complex custom types (<target>)
-t focus change to next work space
+t focus change next work space
     #> press wmkey+d, press wmkey+pagedown, press wmkey+a
 
 # current mode overrides auto-enabled modes
@@ -77,3 +77,6 @@ t computer 2 times focus right
 
 t --modes=vim computer control 2 times save
     #> press ctrl+s, press ctrl+s
+
+t focus change 3 times right
+    #> press wmkey+d, press wmkey+right, press wmkey+right, press wmkey+right, press wmkey+a
