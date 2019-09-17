@@ -72,8 +72,8 @@ RUN mkdir -p /opt/models && cd /opt/models && \
     tar -zxvf tedlium_nnet_ms_sp_online.tgz && \
     find /opt/models/ -name "*.conf" | xargs sed -i 's:test:/opt:g'
 
-COPY run-kaldi /opt/run-kaldi
+COPY run-kaldi.py /opt/run-kaldi.py
 COPY english_nnet2.yaml /opt/models/english_nnet2.yaml
 
 ENV GST_PLUGIN_PATH=/opt/gst-kaldi-nnet2-online/src/:/opt/kaldi/src/gst-plugin/
-CMD ["/usr/bin/python", "/opt/run-kaldi"]
+CMD ["/usr/bin/python", "/opt/run-kaldi.py"]
