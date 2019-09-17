@@ -322,9 +322,8 @@ def cmd_press(_ctx, _, spec):
         else:
             kk = list(map(key_by_name, keys))
             for i in range(times):
-                for k in kk: pyautogui.keyDown(k)
-                time.sleep(0.05)
-                for k in reversed(kk): pyautogui.keyUp(k)
+                for k in kk: pyautogui.keyDown(k, pause=0.02)
+                for k in reversed(kk): pyautogui.keyUp(k, pause=0.02)
 
 @make_builtin('print <words>')
 def cmd_print(ctx, _, s):
