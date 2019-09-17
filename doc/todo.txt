@@ -9,6 +9,7 @@ asr:
 - try to get phonemes out of kaldi and play around with those
 - use a custom dictionary with added/removed words
 - try using our command structure to guide kaldi
+    probably relevant: https://github.com/gooofy/zamia-speech#model-adaptation
 
 command handling:
 - run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
@@ -18,11 +19,14 @@ features:
   asr heard, and maybe understand why it doesn't understand what you said
 - proper python packaging/building
 - internal line editor with geordi edit commands
-- additional bindings/workflows:
-    - readline CLIs?
-    - Qt/Gnome apps?
 - line numbers in 'bad alias' errors
 - on startup, let user know when asr is ready for commands
 - "define type"
 - have output as an OSD-style overlay window
-- things like ctrl-o and ctrl-q seem to be pretty standard among all.. qt/gtk apps? see if we can detect those
+
+mode detection:
+- auto-detect vim insert mode somehow
+- only enable python mode if repl active
+- readline
+- qt/kde
+- gtk/gnome
