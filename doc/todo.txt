@@ -15,6 +15,7 @@ command handling:
 - run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
 
 features:
+- validate config so we never crash
 - "what did i say"/"repeat after me" to play back what was recorded, so you can hear what
   asr heard, and maybe understand why it doesn't understand what you said
 - proper python packaging/building

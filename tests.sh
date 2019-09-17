@@ -14,7 +14,7 @@ fi
 
 function t() {
     echo $*
-    python3 execute.py --configdir=example_config --prompt=False --printactions --dryrun --volume=0 --color=False $*
+    python3 execute.py --configdir=example_config --prompt=False --printactions --dryrun --volume=0 --color=False $*  | grep -v -e '^$'
 }
 
 ########################### TEST CASES: ###########################
@@ -80,3 +80,13 @@ t --modes=vim computer control 2 times save
 
 t focus change 3 times right
     #> press wmkey+d, press wmkey+right, press wmkey+right, press wmkey+right, press wmkey+a
+
+t computer define say lol
+    #> define { { builtin mode computer say lol } }
+    #> in computer say words = in background shell execute echo "$1" | festival --tts 
+
+t computer define print lol
+    #> define { builtin print lol }
+    #> print <words> = 
+    #>     def cmd_print(ctx, _, s):
+    #>         print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))

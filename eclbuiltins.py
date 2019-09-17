@@ -227,23 +227,40 @@ def print_builtin(e, pattern):
     else:
         print('\n' + '\n'.join(map(lambda s: '    ' + s, lines)), end = '\n\n')
 
+def strip_mode(words):
+    if words[:2] == ['builtin', 'mode'] and len(words) > 3:
+        return (words[2], words[3:])
+    elif words[:1] == ['builtin']:
+        return ('builtin', words[1:])
+    raise Exception("cannot determine mode of command: " + str(words))
+
 @make_builtin('define <command>')
-def cmd_define(ctx, _, _cmdmode, cmd):
+def cmd_define(ctx, _, braced_cmd):
     ecl = ctx['ecl']
-    em = ctx['enabled_modes']
-    args = util.split_expansion(cmd)
-    for m in em:
-        for pattern in ecl.modes[m].keys():
-            pr = ecl.match_pattern(pattern, args, em)
-            if pr.longest > 0 and pr.missing == []:
+
+    cmd, rest = util.try_parse_braced_expr(braced_cmd)
+    if cmd is None or rest != '': raise Exception("todo")
+
+    while True:
+        if len(cmd) != 1: break
+        x, rest = util.try_parse_braced_expr(cmd[0])
+        if x is None or rest != '': break
+        cmd = x
+
+    mode, cmd = strip_mode(cmd)
+    if mode == 'builtin':
+        for pattern, _ in builtin_commands.items():
+            pr = ecl.match_pattern(pattern, cmd, [])
+            if pr.longest > 0 and pr.missing == [] and pr.error is None:
+                print_builtin(ecl, pattern)
+    else:
+        for pattern in ecl.modes[mode].keys():
+            pr = ecl.match_pattern(pattern, cmd, [mode])
+            if pr.longest > 0 and pr.missing == [] and pr.error is None:
                 print('\nin ', end='')
-                print(ecl.alias_definition_str(m, pattern, len('in ')))
+                print(ecl.alias_definition_str(mode, pattern, len('in ')))
                 print()
                 return
-    for pattern, _ in builtin_commands.items():
-        pr = ecl.match_pattern(pattern, args, em)
-        if pr.longest > 0 and pr.missing == []:
-            print_builtin(ecl, pattern)
 
 @make_builtin('options')
 def cmd_options(ctx, _):
