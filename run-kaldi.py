@@ -19,17 +19,11 @@ GObject.threads_init()
 Gst.init(None)
 
 class DecoderPipeline2(object):
-    def __init__(self, conf={}):
-        self.create_pipeline(conf)
-
+    def __init__(self, conf):
         self.result_handler = None
         self.full_result_handler = None
         self.eos_handler = None
         self.error_handler = None
-
-
-    def create_pipeline(self, conf):
-
         self.appsrc = Gst.ElementFactory.make("appsrc", "appsrc")
         self.decodebin = Gst.ElementFactory.make("decodebin", "decodebin")
         self.audioconvert = Gst.ElementFactory.make("audioconvert", "audioconvert")
@@ -38,28 +32,25 @@ class DecoderPipeline2(object):
         self.queue1 = Gst.ElementFactory.make("queue", "queue1")
         self.filesink = Gst.ElementFactory.make("filesink", "filesink")
         self.queue2 = Gst.ElementFactory.make("queue", "queue2")
-        self.asr = Gst.ElementFactory.make("kaldinnet2onlinedecoder", "asr")
         self.fakesink = Gst.ElementFactory.make("fakesink", "fakesink")
 
+        self.asr = Gst.ElementFactory.make("kaldinnet2onlinedecoder", "asr")
         if not self.asr:
             print >> sys.stderr, "ERROR: Couldn't create the kaldinnet2onlinedecoder element!"
             sys.exit(-1);
 
         self.asr.set_property("use-threaded-decoder", True) # todo: necessary?
 
-        decoder_config = conf
-        if 'nnet-mode' in decoder_config:
-          self.asr.set_property('nnet-mode', decoder_config['nnet-mode'])
-          del decoder_config['nnet-mode']
+        if 'nnet-mode' in conf:
+            self.asr.set_property('nnet-mode', conf['nnet-mode'])
+            del conf['nnet-mode']
 
-        decoder_config = OrderedDict(decoder_config)
+        conf = OrderedDict(conf)
 
-        if "fst" in decoder_config:
-            decoder_config["fst"] = decoder_config.pop("fst")
-        if "model" in decoder_config:
-            decoder_config["model"] = decoder_config.pop("model")
+        if "fst" in conf: conf["fst"] = conf.pop("fst")
+        if "model" in conf: conf["model"] = conf.pop("model")
 
-        for (key, val) in decoder_config.iteritems():
+        for (key, val) in conf.iteritems():
             if key != "use-threaded-decoder":
                 self.asr.set_property(key, val)
 
@@ -71,7 +62,6 @@ class DecoderPipeline2(object):
                         self.queue1, self.filesink,
                         self.queue2, self.asr, self.fakesink]:
             self.pipeline.add(element)
-
 
         self.appsrc.link(self.decodebin)
         self.decodebin.connect('pad-added', self._connect_decoder)
@@ -103,7 +93,6 @@ class DecoderPipeline2(object):
     def _connect_decoder(self, element, pad):
         pad.link(self.audioconvert.get_static_pad("sink"))
 
-
     def _on_partial_result(self, asr, hyp):
         #logger.info("Got partial result: %s" % hyp.decode('utf8'))
         pass
@@ -123,8 +112,8 @@ class DecoderPipeline2(object):
         print msg.parse_error()
 
     def _on_eos(self, bus, msg):
-        pass
         #logger.info('Pipeline received eos signal')
+        pass
 
     def init_request(self, caps_str):
         #logger.info("Setting caps to %s" % caps_str)
@@ -161,4 +150,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
