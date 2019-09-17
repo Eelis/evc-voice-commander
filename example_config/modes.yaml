@@ -93,7 +93,7 @@ computer (comp): # general commands
     calendar: run orage
     job tree: in new shell run ps fax | less
     live jobs: in new shell run top
-    say <words>: in background shell execute echo "(SayText \"$1\")" | festival
+    say <words>: in background shell execute echo "$1" | festival --tts
     screen grab: run flameshot gui
     door: run cctv
     new browser: run firefox ; mode firefox

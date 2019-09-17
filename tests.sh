@@ -58,10 +58,10 @@ t computer calculate maximum of 9 and 2
 
 # quoting
 t computer say good morning
-    #> execute zsh -c "echo \"(SayText \\\"good morning\\\")\" | festival"
+    #> execute zsh -c "echo \"good morning\" | festival --tts"
 
-t computer 3 times say hello
-    #> execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival", execute zsh -c "echo \"(SayText \\\"hello\\\")\" | festival"
+t computer 2 times say hello world
+    #> execute zsh -c "echo \"hello world\" | festival --tts", execute zsh -c "echo \"hello world\" | festival --tts"
 
 t computer vim 3 times delete last word
     #> press b, text dw, press b, text dw, press b, text dw
