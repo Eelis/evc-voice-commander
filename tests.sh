@@ -71,3 +71,9 @@ t --modes=zsh computer show files
 
 t computer show files
     #> run urxvt -e zsh --interactive -c "unset LESS; ls -l | less -r"
+
+t computer 2 times focus right
+    #> press wmkey+right, press wmkey+right
+
+t --modes=vim computer control 2 times save
+    #> press ctrl+s, press ctrl+s

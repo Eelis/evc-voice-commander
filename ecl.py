@@ -286,28 +286,27 @@ class Context():
             pr.try_improve(self.match_builtin(words, enabled_modes, True))
         return pr
 
-    def match_commands(self, words, enabled_modes, handle_builtins=True, stop_on_semicolon=False):
+    def match_commands(self, words, enabled_modes,
+            handle_builtins=True,
+            stop_on_semicolon=False):
         if words == [] or words[:1] == ['}']:
             return ParseResult()
 
         x = util.try_parse_braced_expr(words[0])
-        if x is not None:
-            sub, more = x
-            if more == '':
-                pr = self.match_commands(sub, enabled_modes, handle_builtins, False)
-                if pr.longest == len(sub) and pr.error is None and pr.missing == []:
-                    pr.longest = 1
-                else:
-                    if pr.error is None:
-                        pr.error = self.describe_cmd_parse_result(pr, sub)
-                    pr.longest = 0
-                    pr.missing = []
-                return pr
+        if x is not None and x[1] == '':
+            sub = x[0]
+            r = self.match_commands(sub, enabled_modes, handle_builtins, False)
+            if r.longest == len(sub) and r.error is None and r.missing == []:
+                r.longest = 1
+            else:
+                if r.error is None:
+                    r.error = self.describe_cmd_parse_result(r, sub)
+                r.longest = 0
+        else:
+            r = self.match_command(words, enabled_modes, handle_builtins)
 
-        r = self.match_command(words, enabled_modes, handle_builtins)
         if r.longest == 0:
-            if words != [] and words[0] != '}':
-                r.missing = ['<command>']
+            r.missing = ['<command>']
             r.actions = []
             r.new_mode = enabled_modes[0]
         else:
@@ -320,15 +319,13 @@ class Context():
                     r.longest += 1
                 if w != []:
                     if r.new_mode is not None:
-                        enabled_modes = enabled_modes.copy()
-                        enabled_modes[0] = r.new_mode
+                        enabled_modes = [r.new_mode] + [m for m in enabled_modes if m != r.new_mode]
                     r2 = self.match_commands(w, enabled_modes, True, stop_on_semicolon)
                     r.longest += r2.longest
                     r.resolved += r2.resolved
                     r.missing = r2.missing
                     r.actions += r2.actions
-                    if r2.error is not None:
-                        r.error = r2.error
+                    if r2.error is not None: r.error = r2.error
                     if r2.longest != 0:
                         if r2.new_mode is not None:
                             r.new_mode = r2.new_mode
