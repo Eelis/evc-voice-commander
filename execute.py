@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import shutil
+import time
 import termcolor
 from contextlib import contextmanager
 from ctypes import *
@@ -29,7 +30,6 @@ auto_enable_cfg = {}
 prompt = True
 printactions = False
 color = True
-sound_effects = False
 
 # active application detection:
 current_windowtitle = ''
@@ -39,6 +39,8 @@ current_windowprocesses = {}
 mode = 'default'
 completions = {}
 suggestions = []
+good_beep = None
+bad_beep = None
 
 def colored(s, c):
     if not color: return s
@@ -279,10 +281,6 @@ def print_prompt():
     print(prompt_string(), end='')
     sys.stdout.flush()
 
-def sound(s, n, wait=True):
-    if sound_effects:
-        util.sound(appdir + '/sounds/' + s + '.wav', n, wait)
-
 def confirm_input(words, pr, original_input):
     n = pr.longest
     cols = shutil.get_terminal_size().columns
@@ -295,13 +293,31 @@ def confirm_input(words, pr, original_input):
         return False
     if prompt:
         util.clear_line()
-        printed = prp + colored(' '.join(words[:n]), 'green')
+        printed = prp
         print(printed, end='')
+        sys.stdout.flush()
+
+    if good_beep is not None and n != 0:
+        good_beep.play(n - 1)
+
+    i = 0
+    while i < n:
+        if prompt:
+            x = colored(words[i], 'green')
+            if i + 1 < n: x += ' '
+            print(x, end='')
+            sys.stdout.flush()
+            printed += x
+        if good_beep is not None:
+            time.sleep(good_beep.get_length())
+        i += 1
+
+    if bad_beep is not None and (n != len(words) or pr.missing != [] or pr.error is not None):
+        bad_beep.play()
+
     if pr.error is not None:
         print()
         print(colored('error:', 'red'), pr.error)
-        sound('good', n)
-        sound('bad', 1, wait=False)
         return False
 
     if prompt:
@@ -320,23 +336,21 @@ def confirm_input(words, pr, original_input):
     if pr.missing == []:
         if pr.retval is not None:
             print(colored(str(pr.retval), 'magenta'))
-    else:
-        if suggestions != []:
-            if len(suggestions) == 1 and not suggestions[0].startswith('<'):
-                print(colored("error: did you mean '" + suggestions[0] + "'?", 'red'))
-            else:
-                print(colored("did you mean:", 'red'))
-                rows = shutil.get_terminal_size().lines
-                for i, s in enumerate(suggestions[:rows - 3]):
-                    print('-', s, '(' + str(i + 1) + ')')
+    elif suggestions != []:
+        if len(suggestions) == 1 and not suggestions[0].startswith('<'):
+            print(colored("error: did you mean '" + suggestions[0] + "'?", 'red'))
         else:
-            what = ' or '.join(map(eclc.italic_types, list(set(pr.missing))))
-            problem = ('missing' if n == len(words) else 'expected')
-            print(colored('error: ' + problem + ' ' + what, 'red'))
+            print(colored("did you mean:", 'red'))
+            rows = shutil.get_terminal_size().lines
+            for i, s in enumerate(suggestions[:rows - 3]):
+                print('-', s, '(' + str(i + 1) + ')')
+    else:
+        problem = ('missing' if n == len(words) else 'expected')
+        problem += ' ' + ' or '.join(map(eclc.italic_types, list(set(pr.missing))))
+        if problem == 'expected ' + eclc.italic_types('<command>'):
+            problem = "no such command"
+        print(colored('error: ' + problem, 'red'))
 
-    sound('good', n)
-    if n != len(words) or pr.missing != []:
-        sound('bad', 1, wait=False)
     return True
 
 ERROR_HANDLER_FUNC = CFUNCTYPE(None, c_char_p, c_int, c_char_p, c_int, c_char_p)
@@ -347,12 +361,12 @@ def py_asound_error_handler(filename, line, function, err, fmt):
 c_asound_error_handler = ERROR_HANDLER_FUNC(py_asound_error_handler)
 
 @contextmanager
-def noalsaerr():
-    if sound_effects:
+def noalsaerr(enabled):
+    if enabled:
         asound = cdll.LoadLibrary('libasound.so')
         asound.snd_lib_error_set_handler(c_asound_error_handler)
     yield
-    if sound_effects:
+    if enabled:
         asound.snd_lib_error_set_handler(None)
 
 @contextmanager
@@ -363,6 +377,20 @@ def hidden_cursor():
         yield
     finally:
         if b: sys.stdout.write("\033[?25h") # restore cursor
+
+def init_sound(volume):
+    global good_beep, bad_beep
+    import pygame
+    pygame.mixer.pre_init(44100, -16, 2, 512)
+        # without the pre_init, there is a ~300ms delay when you play a sound..
+    pygame.mixer.init()
+    pygame.init()
+
+    good_beep = pygame.mixer.Sound('sounds/good.wav')
+    bad_beep = pygame.mixer.Sound('sounds/bad.wav')
+
+    good_beep.set_volume(volume)
+    bad_beep.set_volume(volume)
 
 @click.command()
 @click.option('--color', default=True, type=bool)
@@ -379,7 +407,7 @@ def hidden_cursor():
     # (b) won't interfere with speech recognition.
 @click.argument('cmd', nargs=-1)
 def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, cmd):
-    global sound_effects, cmdline_modes
+    global cmdline_modes
 
     cmdline_modes = modes.split(',')
     modes = cmdline_modes
@@ -394,11 +422,7 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
     globals()['printactions'] = printactions
 
     initial_words = list(cmd)
-    if volume != 0:
-        import pygame
-        pygame.init()
-        pygame.mixer.music.set_volume(volume)
-        sound_effects = True
+    if volume != 0: init_sound(volume)
 
     load_config()
 
@@ -406,7 +430,7 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
         print("no such mode:", mode)
         return
 
-    with noalsaerr():
+    with noalsaerr(volume != 0):
         with hidden_cursor():
             if initial_words != []:
                 eval_command(initial_words, ' '.join(initial_words), modes)

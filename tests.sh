@@ -40,7 +40,7 @@ t --modes=focus,vim,term left
 
 # diagnostic for bad command
 t computer focus lol
-    #> error: expected command
+    #> error: no such command
 
 # equally long but faulty match in non-current mode:
 t --modes=vim-find,vim go

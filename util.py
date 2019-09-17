@@ -191,16 +191,6 @@ def italic(s):
     turn_off_italic = "\x1B[23m"
     return turn_on_italic + s + turn_off_italic
 
-def sound(path, count=1, wait=True):
-    if count == 0: return
-    import pygame
-    pygame.mixer.music.load(path)
-    for i in range(0, count):
-        pygame.mixer.music.play()
-        if wait:
-            while pygame.mixer.music.get_busy(): time.sleep(0.01)
-            time.sleep(0.1)
-
 def clear_line():
     if not sys.stdout.isatty(): return
     cols = shutil.get_terminal_size().columns
