@@ -72,9 +72,6 @@ t --modes=zsh computer show files
 t computer show files
     #> run urxvt -e zsh --interactive -c "unset LESS; ls -l | less -r"
 
-t computer 2 times focus right
-    #> press wmkey right, press wmkey right
-
 t --modes=vim computer control 2 times save
     #> press control s, press control s
 
@@ -91,9 +88,16 @@ t computer define print lol
     #>     def cmd_print(ctx, _, s):
     #>         print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))
 
+t --modes=zsh 3 times press up
+    #> press up, press up, press up
 t --modes=zsh press 3 times up
     #> press up, press up, press up
 t --modes=zsh press up 3 times
     #> press up, press up, press up
-t --modes=zsh 3 times press up
-    #> press up, press up, press up
+
+t computer 2 times focus left
+    #> press wmkey left, press wmkey left
+t computer focus 2 times left
+    #> press wmkey left, press wmkey left
+t computer focus left 2 times
+    #> press wmkey left, press wmkey left

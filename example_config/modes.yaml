@@ -138,7 +138,8 @@ computer (comp): # general commands
     - frame <number>
     - <nextprev> <wm-object>
     - new work space
-    - <number> times <target>
+    - <number> times <direction>
+    - <direction> <number> times
 
 focus: # wm commands
     press <word>+: ~computer
@@ -155,6 +156,7 @@ focus: # wm commands
 
     # targets: (these can be used with 'change' defined above to move the window to the target)
     <direction>: press wmkey $0
+    <direction> <number> times: $1 times $0
     <screen>: press wmkey y $(builtin enumindex screen $0)
     frame <number>: press wmkey j $1
     next window: press wmkey tab
