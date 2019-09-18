@@ -45,7 +45,7 @@ keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
     'accept', 'add', 'alt', 'altleft', 'altright', 'apps', 'backspace',
     'browserback', 'browserfavorites', 'browserforward', 'browserhome',
     'browserrefresh', 'browsersearch', 'browserstop', 'capslock', 'clear',
-    'convert', 'ctrl', 'ctrlleft', 'ctrlright', 'decimal', 'del', 'delete',
+    'convert', 'ctrlleft', 'ctrlright', 'decimal', 'del', 'delete',
     'divide', 'down', 'end', 'enter', 'esc', 'escape', 'execute', 'f1', 'f10',
     'f11', 'f12', 'f13', 'f14', 'f15', 'f16', 'f17', 'f18', 'f19', 'f2', 'f20',
     'f21', 'f22', 'f23', 'f24', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9',
@@ -62,6 +62,8 @@ keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
         # these coincide with names in pyautogui
         # (which we don't want to import just for this list because it takes ~60 milliseconds)
 
+modifier_keys = ['shift', 'control', 'alt', 'wmkey']
+
 extra_key_names = {
     'space': ' ',
     'dollar': '$',
@@ -73,6 +75,7 @@ extra_key_names = {
     'period': '.',
     'comma': ',',
     'slash': '/',
+    'control': 'ctrl',
     'wmkey': 'winleft'
 }
 
@@ -323,13 +326,19 @@ def cmd_return(_ctx, _, w):
 def cmd_press(_ctx, _, spec):
     if dryrun: return
     import pyautogui
-    for combo in util.split_expansion(spec):
-        keys = list(map(key_by_name, combo.split('+')))
-        if len(keys) == 1:
-            pyautogui.press(keys)
+    modifiers = []
+    for key in util.split_expansion(spec):
+        if key in modifier_keys:
+            modifiers.append(key)
         else:
-            for k in keys: pyautogui.keyDown(k, pause=0.02)
-            for k in reversed(keys): pyautogui.keyUp(k, pause=0.02)
+            if modifiers == []:
+                key = key_by_name(key)
+                pyautogui.press([key])
+            else:
+                keys = list(map(key_by_name, modifiers + [key]))
+                for k in keys: pyautogui.keyDown(k, pause=0.02)
+                for k in reversed(keys): pyautogui.keyUp(k, pause=0.02)
+                modifiers = []
 
 @make_builtin('print <word>+')
 def cmd_print(ctx, _, s):

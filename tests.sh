@@ -32,11 +32,11 @@ t computer arith-demo fibonacci 7
 
 # complex custom types (<target>)
 t focus change next work space
-    #> press wmkey+d, press wmkey+pagedown, press wmkey+a
+    #> press wmkey d, press wmkey pagedown, press wmkey a
 
 # current mode overrides auto-enabled modes
 t --modes=focus,vim,term left
-    #> press wmkey+left
+    #> press wmkey left
 
 # diagnostic for bad command
 t computer focus lol
@@ -73,13 +73,13 @@ t computer show files
     #> run urxvt -e zsh --interactive -c "unset LESS; ls -l | less -r"
 
 t computer 2 times focus right
-    #> press wmkey+right, press wmkey+right
+    #> press wmkey right, press wmkey right
 
 t --modes=vim computer control 2 times save
-    #> press ctrl+s, press ctrl+s
+    #> press control s, press control s
 
 t focus change 3 times right
-    #> press wmkey+d, press wmkey+right, press wmkey+right, press wmkey+right, press wmkey+a
+    #> press wmkey d, press wmkey right, press wmkey right, press wmkey right, press wmkey a
 
 t computer define say lol
     #> define { { builtin mode computer say lol } }

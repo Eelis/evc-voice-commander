@@ -144,24 +144,24 @@ focus: # wm commands
     press <word>+: ~computer
     <mode>: builtin mode $0
 
-    mark: press wmkey+d
-    attach: press wmkey+a
+    mark: press wmkey d
+    attach: press wmkey a
     change <target>: mark { $1 } attach
-    close: press wmkey+c
-    kill: press wmkey+c
-    split <direction>: press wmkey+s $1
-    join: press wmkey+v
-    maximize: press wmkey+enter
+    close: press wmkey c
+    kill: press wmkey c
+    split <direction>: press wmkey s $1
+    join: press wmkey v
+    maximize: press wmkey enter
 
     # targets: (these can be used with 'change' defined above to move the window to the target)
-    <direction>: press wmkey+$0
-    <screen>: press wmkey+y $(builtin enumindex screen $0)
-    frame <number>: press wmkey+j $1
-    next window: press wmkey+tab
-    previous window: press wmkey+shift+tab
-    next work space: press wmkey+pagedown
-    previous work space: press wmkey+pageup
-    new work space: press wmkey+w
+    <direction>: press wmkey $0
+    <screen>: press wmkey y $(builtin enumindex screen $0)
+    frame <number>: press wmkey j $1
+    next window: press wmkey tab
+    previous window: press wmkey shift tab
+    next work space: press wmkey pagedown
+    previous work space: press wmkey pageup
+    new work space: press wmkey w
 
 # applications:
 
@@ -179,7 +179,7 @@ less:
 
 thunderbird (mail):
     auto-enable: { for-applications: thunderbird }
-    text <word>: ~builtin
+    text <word>+: ~builtin
     press <word>+: ~computer
     home|delete|escape|<vdir>: press $0
     next: press f
@@ -192,47 +192,47 @@ firefox-navigate:
 
 firefox (web):
     auto-enable: { for-applications: firefox firefox-bin }
-    text <word>: ~builtin
+    text <word>+: ~builtin
     press <word>+: ~computer
     home|escape|delete|<direction>|space: press $0
-    erase: press shift+home delete
-    small: press ctrl+0
-    bigger: press ctrl+0 ; press 6 times ctrl+shift+=
-    finish: press ctrl+w
-    find <word>: press ctrl+f  text $1
+    erase: press shift home delete
+    small: press control 0
+    bigger: press control 0 ; press 6 times control shift =
+    finish: press control w
+    find <word>: press control f ; text $1
     back: press backspace
     location: press f6
     go: press escape f ; builtin mode firefox-navigate
     refresh: press f5
     fresh: press f5
     forward: todo
-    copy: press ctrl+c
-    paste: press ctrl+v
+    copy: press control c
+    paste: press control v
     start of page: press home
     end of page: press end
     page <vdir>: press page$1
     <number> pages <vdir>: press $0 times page$2
-    fresh: press ctrl+t
-    previous: press ctrl+pageup
-    next: press ctrl+pagedown
+    fresh: press control t
+    previous: press control pageup
+    next: press control pagedown
 
 vim-find:
-    text <word>: ~builtin
+    text <word>+: ~builtin
     press <word>+: ~computer
     slash|backspace: press $0
     go: press enter ; builtin mode vim
     escape: press escape ; builtin mode vim
     cancel: escape
-    delete last word: press ctrl+w
+    delete last word: press control w
     correction: delete last word
 
 vim-insert:
-    text <word>: ~builtin
+    text <word>+: ~builtin
     press <word>+: ~computer
     slash|space|semicolon|backspace|period|dollar|percent|colon: press $0
     escape: press escape ; builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
-    delete last word: press ctrl+w
+    delete last word: press control w
     correction: delete last word
 
 vim:
@@ -243,18 +243,18 @@ vim:
     page <vdir>: press page$1
     undo: press escape u
     sorry: undo
-    redo: press escape ctrl+r
-    save: press ctrl+s
+    redo: press escape control r
+    save: press control s
     find <word>: press escape slash ; builtin text $1 ; submode find
     find: press escape slash ; submode find
     delete word: builtin text dw
     delete line: builtin text dd
     <number> <direction>: press $0 times $1
-    copy <number>: select $1  press ctrl+c
-    paste <number>: go $1  press ctrl+v
-    select <number>: escape  press shift+v ; builtin text $1 ; press shift+g
+    copy <number>: select $1  press control c
+    paste <number>: go $1  press control v
+    select <number>: escape  press shift v ; builtin text $1 ; press shift g
     start of file: press escape g g
-    end of file: press escape shift+g
+    end of file: press escape shift g
     start of line: press home
     end of line: press end
     next word: press w
@@ -263,46 +263,46 @@ vim:
     next line: press down
     previous line: press up
     new line: press o ; submode insert
-    go <number>: escape  builtin text $1 ; press shift+g
-    next buffer: escape  press ctrl+end
-    previous buffer: escape  press ctrl+home
+    go <number>: escape  builtin text $1 ; press shift g
+    next buffer: escape  press control end
+    previous buffer: escape  press control home
     next match: escape  press n
-    previous match: escape  press shift+n
+    previous match: escape  press shift n
     finish: escape  builtin keydown shift  builtin text zz ; builtin keyup shift
-    refresh: press ctrl+l
+    refresh: press control l
     insert: press insert ; submode insert
 
 vlc:
     auto-enable: { for-applications: vlc }
     press <word>+: ~computer
     full screen: press f
-    finish: press ctrl+q
+    finish: press control q
 
 zsh (shell):
     auto-enable: { for-leaf-applications: zsh }
-    text <word>: ~builtin
+    text <word>+: ~builtin
     press <word>+: ~computer
     do it: press enter
     again: press up enter
-    page <vdir>: press shift+page$1
-    finish: press ctrl+d
+    page <vdir>: press shift page$1
+    finish: press control d
     change directory <directory>: text cd $2 ; press enter
     directory up: text cd .. ; press enter
     directory back: text cd - ; press enter
     history: text history ; press enter
     execute <number>: text "!$1" ; press enter
-    delete last word: press ctrl+w
+    delete last word: press control w
     correction: delete last word
     <direction>|space: press $0
-    erase: press ctrl+u
+    erase: press control u
     status of version/make patch/index file <file>: ~computer
     show files/modify <file>/tree: ~computer
-    clear screen: press ctrl+l
+    clear screen: press control l
 
 urxvt (term):
     auto-enable: { for-applications: urxvt }
     press <word>+: ~computer
-    zoom in: press ctrl+plus # needs to be enabled in urxvt config
+    zoom in: press control plus # needs to be enabled in urxvt config
 
 gitk:
     auto-enable: { for-suffixes: ['- gitk'] }
@@ -310,12 +310,12 @@ gitk:
     <vdir>: press $0
     <number> <vdir>: press $0 times $1
     change <target>: focus change $1
-    finish: press ctrl+q
+    finish: press control q
 
 python-repl (python):
     auto-enable: { for-leaf-applications: python3 }
     press <word>+: ~computer
-    finish: press ctrl+d
+    finish: press control d
 
 docker:
     list: computer in new shell run unset LESS; docker ps | less -r
@@ -323,7 +323,7 @@ docker:
 orage:
     auto-enable: { for-applications: orage }
     press <word>+: ~computer
-    finish: press ctrl+q
+    finish: press control q
 
 <kube-obj-type>: pod|node|service|deployment
 
@@ -404,4 +404,4 @@ calculate (calc):
 ktorrent:
     auto-enable: { for-applications: ktorrent }
     press <word>+: ~computer
-    delete download: press ctrl+delete
+    delete download: press control delete
