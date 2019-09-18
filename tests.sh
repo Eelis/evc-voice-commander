@@ -79,7 +79,7 @@ t focus change 3 times right
     #> press wmkey d, press wmkey right, press wmkey right, press wmkey right, press wmkey a
 
 t computer define say lol
-    #> define { { builtin mode computer say lol } }
+    #> define { builtin mode computer say lol }
     #> in computer say word+ = in background shell execute echo "$1" | festival --tts 
 
 t computer define print lol

@@ -120,8 +120,9 @@ class Context():
                 x.missing = ['<command>']
                 x.retval = None
             elif x.resolved != None:
-                consumed = ['{'] + x.resolved + ['}']
-                # todo: only if necessary
+                consumed = x.resolved
+                if consumed[:1] != ['{']:
+                    consumed = ['{'] + consumed + ['}']
                 x.retval = ' '.join(consumed)
             x.actions = []
             return x
@@ -230,13 +231,16 @@ class Context():
         if r.longest == 0 or r.missing != []: return r
         vars, m, expansion, pattern = r.retval
 
-        r.resolved = ['{', 'builtin', 'mode', m] + vars + ['}']
-
         if expansion == '~builtin':
             return self.match_builtin(input, enabled_modes, False)
         if expansion.startswith('~'):
             mod = expansion[1:]
             return self.match_alias(input, [mod], input_modes)
+
+        r.resolved = vars
+        pre = ['{', 'builtin', 'mode', m]
+        if vars[:len(pre)] != pre:
+            r.resolved = pre + vars + ['}']
 
         errorpart = 'command ' + self.colored(' '.join(map(util.quote_if_necessary, input[:r.longest])), 'green') + \
             ' matched alias:\n  ' + self.alias_definition_str(m, pattern, 4) + '\n'
