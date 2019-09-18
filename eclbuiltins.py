@@ -30,13 +30,6 @@ def key_by_name(name):
 def is_keyname(s):
     return s in keynames or s in extra_key_names
 
-def is_keyspec(spec):
-    mult = spec.find('*')
-    if mult != -1:
-        if not spec[:mult].isdigit(): return False
-        spec = spec[mult+1:]
-    return all(map(is_keyname, spec.split('+')))
-
 keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
     ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
     '8', '9', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`',
@@ -72,6 +65,8 @@ extra_key_names = {
     'colon': ':',
     'semicolon': ';',
     'percent': '%',
+    'plus': '+',
+    'minus': '-',
     'period': '.',
     'comma': ',',
     'slash': '/',
@@ -85,7 +80,6 @@ builtin_types = {
     'positive': lambda s: s.isdigit() and int(s) > 0,
     'job': lambda n: n.isdigit() and int(n) in jobs,
     'key': is_keyname,
-    'keys': is_keyspec,
 }
 
 #######################################
@@ -322,7 +316,7 @@ builtin_commands['mode <mode>'] = (None, None)
 def cmd_return(_ctx, _, w):
     return w
 
-@make_builtin('press <keys>+')
+@make_builtin('press <key>+')
 def cmd_press(_ctx, _, spec):
     if dryrun: return
     import pyautogui

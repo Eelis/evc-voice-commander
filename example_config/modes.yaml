@@ -74,9 +74,9 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
 
 computer (comp): # general commands
     <ext-mode>: ~mode-map
-    print <word>+/press <keys>+/run <word>+/text <word>+: ~builtin
-    press <number> times <keys>+: $1 times press $3
-    press <keys> <number> times: $2 times press $1
+    print <word>+/press <key>+/run <word>+/text <word>+: ~builtin
+    press <number> times <key>+: $1 times press $3
+    press <key> <number> times: $2 times press $1
     restart commander/shutdown commander/jobs/mode <mode>/window processes: ~builtin
     change commands: in new terminal run vim "$configdir/modes.yaml"
     change replacements: in new terminal run vim "$configdir/replacements.yaml"
@@ -305,6 +305,8 @@ urxvt (term):
     auto-enable: { for-applications: urxvt }
     press <word>+: ~computer
     zoom in: press control plus # needs to be enabled in urxvt config
+    zoom out: press control minus
+    magnify: zoom in
 
 gitk:
     auto-enable: { for-suffixes: ['- gitk'] }
