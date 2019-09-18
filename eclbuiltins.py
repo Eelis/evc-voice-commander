@@ -122,9 +122,9 @@ def cmd_window_processes(*_):
     print('  ' + util.print_pstree(processes, 2))
 
 @make_builtin('asynchronously <command>')
-def cmd_asynchronously(ctx, _, mode, cmd):
+def cmd_asynchronously(ctx, _, cmd):
     global jobs, next_job_nr
-    pr = ctx['ecl'].match_command(util.split_expansion(cmd), [mode])
+    pr = ctx['ecl'].match_commands(util.split_expansion(cmd), [])
     n = next_job_nr
     next_job_nr += 1
     jobs[n] = cmd

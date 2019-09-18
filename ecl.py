@@ -221,13 +221,12 @@ class Context():
 
     def match_alias(self, input, enabled_modes, input_modes):
         r = ParseResult((None, None, None, None))
-        for m in (["default"] if enabled_modes[0] == "default" else enabled_modes):
+        for m in (["default"] if enabled_modes[:1] == ["default"] else enabled_modes):
             for pattern, exp in self.modes[m].items():
                 x = self.match_pattern(pattern, input, input_modes)
                 x.retval = (x.retval, m, exp, pattern)
                 r.try_improve(x)
 
-        r.new_mode = enabled_modes[0]
         if r.longest == 0 or r.missing != []: return r
         vars, m, expansion, pattern = r.retval
 
@@ -294,9 +293,9 @@ class Context():
         return r
 
     def match_command(self, words, enabled_modes, handle_builtins=True):
-        enabled_modes = [enabled_modes[0]] + [m for m in self.modes
-            if m != enabled_modes[0] and
-                (m in enabled_modes or (enabled_modes[0] != 'default' and m in self.always_on_modes))]
+        enabled_modes = enabled_modes[:1] + [m for m in self.modes
+            if [m] != enabled_modes[:1] and
+                (m in enabled_modes or (enabled_modes[:1] != ['default'] and m in self.always_on_modes))]
                     # todo: don't hard-code 'default' here
 
         pr = self.match_alias(words, enabled_modes, enabled_modes)
@@ -326,7 +325,6 @@ class Context():
         if r.longest == 0:
             r.missing = ['<command>']
             r.actions = []
-            r.new_mode = enabled_modes[0]
         else:
             if r.longest != len(words) and r.error is None and r.missing == []:
                 w = words[r.longest:]
