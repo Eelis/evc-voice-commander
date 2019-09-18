@@ -90,22 +90,22 @@ class Context():
 
     def match_simple_parameter(self, param, args, enabled_modes):
         arg = args[0]
-        r = ParseResult([])
+        r = ParseResult()
         r.missing = [param]
         for alt in alternatives(param):
             if alt == arg:
                 r.longest = 1
                 r.missing = []
-                r.retval = [arg]
+                r.retval = arg
                 break
             if alt.startswith('<'):
                 type = alt[1:-1]
                 r.try_improve(self.match_type(param, args, type, enabled_modes))
                 if r.retval is not None:
-                    r.retval = [' '.join(r.retval)]
+                    r.retval = ' '.join(r.retval)
         return r
 
-    def match_parameter(self, param, args, enabled_modes, i):
+    def match_parameter(self, param, args, enabled_modes):
         if param == '<command>':
             x = self.match_commands(args, enabled_modes, True, True)
             consumed = list(map(util.quote_if_necessary, args[:x.longest]))
@@ -115,35 +115,30 @@ class Context():
             elif x.resolved != None:
                 consumed = ['{'] + x.resolved + ['}']
                 # todo: only if necessary
-                x.retval = (args[x.longest:], [' '.join(consumed)], i + 1)
+                x.retval = ' '.join(consumed)
             x.actions = []
-            return x
-        if param == '<words>':
+        elif param == '<words>':
             x = ParseResult()
             while x.longest < len(args) and args[x.longest] != ';':
                 x.longest += 1
-            x.retval = (args[x.longest:], [' '.join(map(util.quote_if_necessary, args[:x.longest]))], i + 1)
-            return x
-        x = self.match_simple_parameter(param, args, enabled_modes)
-        if x.retval is not None:
-            x.retval = (args[x.longest:], x.retval, i + 1)
-        pr = ParseResult()
-        pr.try_improve(x)
-        return pr
+            x.retval = ' '.join(map(util.quote_if_necessary, args[:x.longest]))
+        else:
+            x = self.match_simple_parameter(param, args, enabled_modes)
+        return x
 
     def match_params(self, params, args, enabled_modes):
         pr = ParseResult([])
-        i = 0
-        while i < len(params) and args != []:
-            x = self.match_parameter(params[i], args, enabled_modes, i)
+        while params != [] and args != []:
+            x = self.match_parameter(params[0], args, enabled_modes)
             pr.longest += x.longest
             if x.longest != 0: pr.missing = x.missing
             if x.error is not None: pr.error = x.error
             if x.retval is None or x.longest == 0: break
-            args, vars_here, i = x.retval
-            pr.retval += vars_here
-        if i < len(params) and pr.missing == []:
-            pr.missing = [params[i]]
+            args = args[x.longest:]
+            params = params[1:]
+            pr.retval += [x.retval]
+        if params != [] and pr.missing == []:
+            pr.missing = [params[0]]
         return pr
 
     def match_pattern(self, pattern, input, enabled_modes):
