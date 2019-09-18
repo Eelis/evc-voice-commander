@@ -31,14 +31,11 @@ def is_keyname(s):
     return s in keynames or s in extra_key_names
 
 def is_keyspec(spec):
-    for combo in spec.split(','):
-        mult = combo.find('*')
-        if mult != -1:
-            if not combo[:mult].isdigit(): return False
-            combo = combo[mult+1:]
-        for k in combo.split('+'):
-            if not is_keyname(k): return False
-    return True
+    mult = spec.find('*')
+    if mult != -1:
+        if not spec[:mult].isdigit(): return False
+        spec = spec[mult+1:]
+    return all(map(is_keyname, spec.split('+')))
 
 keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
     ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
@@ -322,25 +319,17 @@ builtin_commands['mode <mode>'] = (None, None)
 def cmd_return(_ctx, _, w):
     return w
 
-@make_builtin('press <keys>')
+@make_builtin('press <keys>+')
 def cmd_press(_ctx, _, spec):
     if dryrun: return
     import pyautogui
-    for combo in spec.split(','):
-        times = 1
-        mult = combo.find('*')
-        if mult != -1:
-            times = int(combo[:mult])
-            combo = combo[mult+1:]
-        keys = combo.split('+')
+    for combo in util.split_expansion(spec):
+        keys = list(map(key_by_name, combo.split('+')))
         if len(keys) == 1:
-            k = key_by_name(keys[0])
-            pyautogui.press([k] * times)
+            pyautogui.press(keys)
         else:
-            kk = list(map(key_by_name, keys))
-            for i in range(times):
-                for k in kk: pyautogui.keyDown(k, pause=0.02)
-                for k in reversed(kk): pyautogui.keyUp(k, pause=0.02)
+            for k in keys: pyautogui.keyDown(k, pause=0.02)
+            for k in reversed(keys): pyautogui.keyUp(k, pause=0.02)
 
 @make_builtin('print <word>+')
 def cmd_print(ctx, _, s):

@@ -90,3 +90,10 @@ t computer define print lol
     #> print <word>+ = 
     #>     def cmd_print(ctx, _, s):
     #>         print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))
+
+t --modes=zsh press 3 times up
+    #> press up, press up, press up
+t --modes=zsh press up 3 times
+    #> press up, press up, press up
+t --modes=zsh 3 times press up
+    #> press up, press up, press up

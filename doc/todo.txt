@@ -24,6 +24,7 @@ features:
 - on startup, let user know when asr is ready for commands
 - "define type"
 - have output as an OSD-style overlay window
+- if you say 'left' and it's interpreted as 'deft' in a context that is known to accept 'left' but not 'deft', suggest 'left'
 
 mode detection:
 - auto-detect vim insert mode somehow

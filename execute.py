@@ -156,11 +156,18 @@ def get_suggestions_for_type(type, enums):
     if type in enums:
         return [x for form in ecl.forms(enums[type])
                   for x in get_suggestions(ecl.params(form)[0], enums)]
-    return []
+    return ['<' + type + '>']
+
+def suggestions_for_alternative(alt, enums):
+    if alt.endswith('+'): alt = alt[:-1]
+    if alt.startswith('<'):
+        type = alt[1:-1]
+        return get_suggestions_for_type(type, enums)
+    return [alt]
 
 def get_suggestions(param, enums):
-    return [x for u in ecl.alternatives(param)
-              for x in (get_suggestions_for_type(u[1:-1], enums) if u.startswith('<') else [u])]
+    return [sug for alt in ecl.alternatives(param)
+                for sug in suggestions_for_alternative(alt, enums)]
 
 def eval_command(words, line, enabled_modes):
     global suggestions, mode
@@ -336,6 +343,8 @@ def confirm_input(words, pr, original_input):
     if pr.missing == []:
         if pr.retval is not None:
             print(colored(str(pr.retval), 'magenta'))
+    elif n != len(words) and pr.missing == ['<command>']:
+        print(colored('error: no such command', 'red'))
     elif suggestions != []:
         if len(suggestions) == 1 and not suggestions[0].startswith('<'):
             print(colored("error: did you mean '" + suggestions[0] + "'?", 'red'))
@@ -347,8 +356,6 @@ def confirm_input(words, pr, original_input):
     else:
         problem = ('missing' if n == len(words) else 'expected')
         problem += ' ' + ' or '.join(map(eclc.italic_types_in_alternative, list(set(pr.missing))))
-        if problem == 'expected ' + eclc.italic_types_in_alternative('<command>'):
-            problem = "no such command"
         print(colored('error: ' + problem, 'red'))
 
     return True
