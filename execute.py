@@ -87,6 +87,7 @@ def load_config():
     # handle auto-enabling:
     eclc.always_on_modes = []
     for mode, aliases in modes.items():
+        if type(aliases) is not dict: raise Exception(mode + " is not a dict")
         cfg = {}
         if 'auto-enable' in aliases:
             cfg = aliases['auto-enable']
@@ -101,6 +102,27 @@ def load_config():
         auto_enable_cfg[mode] = cfg
 
         if cfg['always']: eclc.always_on_modes.append(mode)
+
+    # validate types and expansions:
+    for mode, aliases in modes.items():
+        for pattern, expansion in aliases.items():
+            if expansion == {}:
+                expansion = '{}'
+                aliases[pattern] = expansion
+            if type(expansion) is not str:
+                raise Exception(mode + ": " + pattern + ": expected string, not " + str(type(expansion)))
+            if expansion.startswith('~'):
+                redir = expansion[1:]
+                if redir != 'builtin' and redir not in modes:
+                    raise Exception(mode + ": " + pattern + ": ~" + redir + ": no such mode")
+            for f in ecl.forms(pattern):
+                for p in ecl.params(f):
+                    for a in ecl.alternatives(p):
+                        if a.endswith('+'): a = a[:-1]
+                        if a.startswith('<'):
+                            t = a[1:-1]
+                            if not eclc.is_type(t):
+                                raise Exception(mode + ": " + pattern + ": no such type: " + t)
 
     eclc.modes = modes
 
@@ -433,7 +455,11 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
     initial_words = list(cmd)
     if volume != 0: init_sound(volume)
 
-    load_config()
+    try:
+        load_config()
+    except Exception as e:
+        print("\nerror: invalid config:", e)
+        return
 
     for m in cmdline_modes:
         if m not in eclc.modes:
