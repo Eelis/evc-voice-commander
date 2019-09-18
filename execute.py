@@ -169,7 +169,7 @@ def get_suggestions(param, enums):
     return [sug for alt in ecl.alternatives(param)
                 for sug in suggestions_for_alternative(alt, enums)]
 
-def eval_command(words, line, enabled_modes):
+def eval_command(words, line, enabled_modes, ignore_0match):
     global suggestions, mode
     if words == []: return
 
@@ -179,7 +179,7 @@ def eval_command(words, line, enabled_modes):
     if pr.longest != 0:
         suggestions = list(set([y for x in pr.missing for y in get_suggestions(x, eclc.enums)]))
         suggestions.sort()
-    c = confirm_input(words, pr, line)
+    c = confirm_input(words, pr, line, ignore_0match)
     if pr.new_mode is not None:
         mode = pr.new_mode
 
@@ -259,12 +259,12 @@ async def process_lines(input):
                     if p is not None: words = successful_input + [suggestions[p]]
 
                 enabled_modes = get_active_modes()
-                longest = eval_command(words, line, enabled_modes)
+                longest = eval_command(words, line, enabled_modes, True)
                 if longest != 0:
                     successful_input = words[:longest]
                 elif "dictation" in eclc.script_vars and eclc.script_vars["dictation"] == "true":
                     eval_command(["builtin", "text"] + words, "builtin text " + line,
-                        enabled_modes)
+                        enabled_modes, True)
                 if prompt: print_prompt()
                 last_active_modes = get_active_modes()
 
@@ -288,12 +288,12 @@ def print_prompt():
     print(prompt_string(), end='')
     sys.stdout.flush()
 
-def confirm_input(words, pr, original_input):
+def confirm_input(words, pr, original_input, ignore_0match):
     n = pr.longest
     cols = shutil.get_terminal_size().columns
     prp = prompt_string()
     printed = ''
-    if n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit()):
+    if ignore_0match and (n == 0 or (n == 1 and pr.missing != [] and words[0].isdigit())):
         if prompt: util.clear_line()
         print(prp + colored(util.truncate(original_input, cols - len(util.strip_markup(prp))), 'yellow'), end='\r')
         sys.stdout.flush()
@@ -444,7 +444,7 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
     with noalsaerr(volume != 0):
         with hidden_cursor():
             if initial_words != []:
-                eval_command(initial_words, ' '.join(initial_words), modes)
+                eval_command(initial_words, ' '.join(initial_words), modes, False)
             else:
                 import asyncio
                 asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))
