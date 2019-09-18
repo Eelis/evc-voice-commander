@@ -83,10 +83,10 @@ t focus change 3 times right
 
 t computer define say lol
     #> define { { builtin mode computer say lol } }
-    #> in computer say words = in background shell execute echo "$1" | festival --tts 
+    #> in computer say word+ = in background shell execute echo "$1" | festival --tts 
 
 t computer define print lol
     #> define { builtin print lol }
-    #> print <words> = 
+    #> print <word>+ = 
     #>     def cmd_print(ctx, _, s):
     #>         print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))

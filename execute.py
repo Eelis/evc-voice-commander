@@ -346,8 +346,8 @@ def confirm_input(words, pr, original_input):
                 print('-', s, '(' + str(i + 1) + ')')
     else:
         problem = ('missing' if n == len(words) else 'expected')
-        problem += ' ' + ' or '.join(map(eclc.italic_types, list(set(pr.missing))))
-        if problem == 'expected ' + eclc.italic_types('<command>'):
+        problem += ' ' + ' or '.join(map(eclc.italic_types_in_alternative, list(set(pr.missing))))
+        if problem == 'expected ' + eclc.italic_types_in_alternative('<command>'):
             problem = "no such command"
         print(colored('error: ' + problem, 'red'))
 

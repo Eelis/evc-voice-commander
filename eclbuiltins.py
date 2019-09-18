@@ -141,7 +141,7 @@ def cmd_asynchronously(ctx, _, mode, cmd):
         #if prompt: print_prompt()
     threading.Thread(target=f).start()
 
-@make_builtin('run <words>')
+@make_builtin('run <word>+')
 def cmd_run(_ctx, _, cmd):
     if dryrun: return
     subprocess.Popen(
@@ -150,7 +150,7 @@ def cmd_run(_ctx, _, cmd):
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
 
-@make_builtin('execute <words>')
+@make_builtin('execute <word>+')
 def cmd_execute(ctx, _, cmd):
     if dryrun: return
     output = subprocess.Popen(
@@ -310,7 +310,7 @@ def cmd_options(ctx, _):
         s = l[-1]; l[-1] = s[:-2] # remove last comma
         print(util.indented_and_wrapped(l, indent), end='\n\n')
 
-@make_builtin('text <words>')
+@make_builtin('text <word>+')
 def cmd_text(_ctx, _, s):
     if not dryrun:
         import pyautogui
@@ -342,6 +342,6 @@ def cmd_press(_ctx, _, spec):
                 for k in kk: pyautogui.keyDown(k, pause=0.02)
                 for k in reversed(kk): pyautogui.keyUp(k, pause=0.02)
 
-@make_builtin('print <words>')
+@make_builtin('print <word>+')
 def cmd_print(ctx, _, s):
     print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))

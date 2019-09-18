@@ -52,11 +52,18 @@ class Context():
     def color_mode(self, m):     return self.colored(m, 'cyan')
     def color_commands(self, p): return self.colored(p, 'magenta')
 
-    def italic_types(self, pattern):
+    def italic_types_in_alternative(self, alt):
+        n=''
+        if alt.endswith('+'):
+            n = '+'
+            alt = alt[:-1]
+        return (self.italic(alt[1:-1]) if alt.startswith('<') else alt) + n
+
+    def italic_types_in_pattern(self, pattern):
         return '/'.join(
                 [' '.join(
                     ['|'.join(
-                        [ (self.italic(alt[1:-1]) if alt.startswith('<') else alt)
+                        [ self.italic_types_in_alternative(alt)
                             for alt in alternatives(param)
                         ])
                         for param in params(form)
@@ -65,7 +72,7 @@ class Context():
 
     def alias_definition_str(self, mode, pattern, start_column=0):
         expansion = self.modes[mode][pattern]
-        pat = self.italic_types(pattern)
+        pat = self.italic_types_in_pattern(pattern)
         r = self.color_mode(mode) + ' ' + self.color_commands(pat) + ' = '
         indent = start_column + len(mode) + len(util.strip_markup(pat)) + len("  = ")
         l = [self.color_commands(e) + ' ' for e in expansion.split()] # todo: handle '' args
@@ -117,14 +124,24 @@ class Context():
                 # todo: only if necessary
                 x.retval = ' '.join(consumed)
             x.actions = []
-        elif param == '<words>':
-            x = ParseResult()
-            while x.longest < len(args) and args[x.longest] != ';':
-                x.longest += 1
-            x.retval = ' '.join(map(util.quote_if_necessary, args[:x.longest]))
+            return x
+        elif param.endswith('+'):
+            sub = param[:-1]
+            pr = ParseResult([])
+            while args != [] and args[0] != ';':
+                x = self.match_parameter(sub, args, enabled_modes)
+                pr.longest += x.longest
+                if x.longest != 0: pr.missing = x.missing
+                if x.error is not None: pr.error = x.error
+                if x.retval is None or x.longest == 0 or x.error is not None:
+                    pr.retval = None
+                    return pr
+                pr.retval.append(x.retval)
+                args = args[x.longest:]
+            pr.retval = ' '.join(map(util.quote_if_necessary, pr.retval))
+            return pr
         else:
-            x = self.match_simple_parameter(param, args, enabled_modes)
-        return x
+            return self.match_simple_parameter(param, args, enabled_modes)
 
     def match_params(self, params, args, enabled_modes):
         pr = ParseResult([])
@@ -196,7 +213,7 @@ class Context():
         msg = 'invalid command:\n  ' + s + '\n'
         if pr.missing != []:
             msg += ('missing ' if pr.longest == len(exp) else 'expected ')
-            msg += ' or '.join(map(self.italic_types, pr.missing)) + '\n'
+            msg += ' or '.join(map(self.italic_types_in_pattern, pr.missing)) + '\n'
         elif pr.longest != len(exp):
             msg += "unexpected " + exp[pr.longest]
         return msg

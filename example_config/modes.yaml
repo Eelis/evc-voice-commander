@@ -61,7 +61,7 @@ control ():
     <bool> or true: builtin return true
 
     word <word> is among <word>: builtin $1 equals $4
-    word <word> is among <word> <words>: $(builtin $1 equals $4) or $(word $1 is among $5)
+    word <word> is among <word> <word>+: $(builtin $1 equals $4) or $(word $1 is among $5)
 
 # main modes:
 
@@ -75,7 +75,7 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
 
 computer (comp): # general commands
     <ext-mode>: builtin mode mode-map mode $0
-    print <words>/press <keys>/run <words>/text <words>: ~builtin
+    print <word>+/press <keys>/run <word>+/text <word>+: ~builtin
     restart commander/shutdown commander/jobs/mode <mode>/window processes: ~builtin
     change commands: in new terminal run vim "$configdir/modes.yaml"
     change replacements: in new terminal run vim "$configdir/replacements.yaml"
@@ -85,15 +85,15 @@ computer (comp): # general commands
 
     # ways to run things:
     in <duration> <command>: builtin asynchronously sleep $1 $2
-    in new terminal run <words>: run urxvt -e $4
-    in new shell run <words>: in new terminal run zsh --interactive -c "$4"
-    in background shell run|execute <words>: builtin $3 zsh -c "$4"
+    in new terminal run <word>+: run urxvt -e $4
+    in new shell run <word>+: in new terminal run zsh --interactive -c "$4"
+    in background shell run|execute <word>+: builtin $3 zsh -c "$4"
 
     # specific applications to run
     calendar: run orage
     job tree: in new shell run ps fax | less
     live jobs: in new shell run top
-    say <words>: in background shell execute echo "$1" | festival --tts
+    say <word>+: in background shell execute echo "$1" | festival --tts
     screen grab: run flameshot gui
     door: run cctv
     new browser: run firefox ; mode firefox
@@ -346,7 +346,7 @@ kubectl:
     get|describe|delete <kube-object>: computer in new shell run "unset LESS; kubectl $0 $1 $2 | less"
 
 arith-demo:
-    print <words>/return <word>: ~builtin
+    print <word>+/return <word>: ~builtin
     # here, just for fun, we build arithmetic from +1 and -1.
     # this is currently too slow to be useful though, so elsewhere
     # we use built-ins.
@@ -380,7 +380,7 @@ arith-demo:
 <arith-binop>: plus|minus|times
 
 calculate (calc):
-    print <words>/return <word>/<number> <arith-binop>|<order> <number>: ~builtin
+    print <word>+/return <word>/<number> <arith-binop>|<order> <number>: ~builtin
     if <bool> <command> else <command>: ~control
 
     make <word> <word>: builtin set $1 $2
