@@ -212,7 +212,7 @@ def maybe_pick_suggestion(words):
 
 async def process_lines(input):
     import asyncio
-    global mode, current_windowtitle, current_windowprocesses
+    global current_windowtitle, current_windowprocesses
     loop = asyncio.get_event_loop()
     reader = asyncio.StreamReader(loop=loop, limit=asyncio.streams._DEFAULT_LIMIT)
     await loop.connect_read_pipe(
@@ -421,8 +421,6 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
     global cmdline_modes
 
     cmdline_modes = modes.split(',')
-    modes = cmdline_modes
-
     globals()['color'] = color
     eclc.color = color
     globals()['configdir'] = configdir
@@ -437,14 +435,15 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
 
     load_config()
 
-    if mode not in eclc.modes:
-        print("no such mode:", mode)
-        return
+    for m in cmdline_modes:
+        if m not in eclc.modes:
+            print(colored('error: no such mode: ' + m, 'red'))
+            return
 
     with noalsaerr(volume != 0):
         with hidden_cursor():
             if initial_words != []:
-                eval_command(initial_words, ' '.join(initial_words), modes, False)
+                eval_command(initial_words, ' '.join(initial_words), cmdline_modes, False)
             else:
                 import asyncio
                 asyncio.get_event_loop().run_until_complete(process_lines(sys.stdin))

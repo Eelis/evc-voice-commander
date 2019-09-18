@@ -35,7 +35,7 @@ t focus change next work space
     #> press wmkey d, press wmkey pagedown, press wmkey a
 
 # current mode overrides auto-enabled modes
-t --modes=focus,vim,term left
+t --modes=focus,vim,urxvt,zsh left
     #> press wmkey left
 
 # diagnostic for bad command
