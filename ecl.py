@@ -274,6 +274,8 @@ class Context():
         r.retval = None
         if vars != None:
             r.resolved = ['builtin'] + vars
+            if vars[:1] == ['mode']:
+                r.resolved = []
         if r.longest != 0 and r.missing == []:
             if f is not None:
                 ctx = {'enabled_modes': enabled_modes, 'ecl': self}
