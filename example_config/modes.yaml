@@ -61,8 +61,14 @@ control ():
     word <word> is among <word> <word>+: $(builtin $1 equals $4) or $(word $1 is among $5)
 
     stop/silence/enough already/shut the fuck up/let me be:
-        builtin set dictation false
+        stop dictation
         builtin mode default
+
+    thank you: thank-you-reply $( builtin randomint 4 ) ; stop
+    thank-you-reply 0: computer say no problem
+    thank-you-reply 1: computer say my pleasure
+    thank-you-reply 2: computer say sure thing
+    thank-you-reply 3: computer say any time
 
 # main modes:
 
@@ -98,8 +104,9 @@ computer (comp): # general commands
     say <word>+: in background shell execute echo "$1" | festival --tts
     screen grab: run flameshot gui
     door: run cctv
-    new browser: run firefox ; mode firefox
-    new terminal: run urxvt ; mode urxvt
+    new browser: run firefox ; web
+    new terminal: run urxvt ; terminal
+    what time is it/what's the time: in background shell execute date +%R | festival --tts
 
     if in shell <command> else <command>:
         if $(word zsh is among $(builtin get active modes)) $3 else $5
@@ -232,11 +239,16 @@ vim-find:
 vim-insert:
     text <word>+: ~builtin
     press <word>+: ~computer
-    slash|space|semicolon|backspace|period|dollar|percent|colon: press $0
+    slash/space/semicolon/backspace/period/dollar/percent/colon: press $0
+    single|double quote: press "$0 $1"
     escape: press escape ; builtin mode vim
         # text is not in edit itself because in view mode, entering a textual word makes no sense
     delete last word: press control w
     correction: delete last word
+    finish:
+        press escape ;
+        builtin keydown shift ;  builtin text zz ; builtin keyup shift ;
+        builtin mode computer
 
 vim:
     auto-enable: { for-applications: vim }
