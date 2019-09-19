@@ -4,23 +4,22 @@ audio input:
 - cancel feedback in microphone signal
 - add echo script to easily check microphone output
 - recognize specific voices so that visitors can't control machine without permission
+- support audio and keyboard input simultaneously
 
 asr:
 - try to get phonemes out of kaldi and play around with those
 - use a custom dictionary with added/removed words
 - try using our command structure to guide kaldi
     probably relevant: https://github.com/gooofy/zamia-speech#model-adaptation
-
-command handling:
-- run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
+- zamia-based asr script: https://github.com/gooofy/zamia-speech
 
 features:
-- validate config so we never crash
+- run commands that cause a window change immediately, so that auto-enabled modes work in the rest of the command
 - "what did i say"/"repeat after me" to play back what was recorded, so you can hear what
   asr heard, and maybe understand why it doesn't understand what you said
 - proper python packaging/building
 - internal line editor with geordi edit commands
-- line numbers in 'bad alias' errors
+- line numbers in config loading errors
 - on startup, let user know when asr is ready for commands
 - "define type"
 - have output as an OSD-style overlay window
