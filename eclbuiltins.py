@@ -7,6 +7,7 @@ import threading
 import os
 import sys
 import util
+import random
 
 builtin_commands = {}
 
@@ -342,3 +343,7 @@ def cmd_press(_ctx, _, spec):
 @make_builtin('print <word>+')
 def cmd_print(ctx, _, s):
     print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))
+
+@make_functional_builtin('randomint <number>')
+def cmd_return(_ctx, _randomint, max):
+    return str(random.randint(0, int(max) - 1))
