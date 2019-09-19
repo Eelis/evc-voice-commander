@@ -52,9 +52,6 @@ class Context():
     def color_mode(self, m):     return self.colored(m, 'cyan')
     def color_commands(self, p): return self.colored(p, 'magenta')
 
-    def is_type(self, t):
-        return t in self.enums or t in self.builtin_types or t in ['mode', 'command']
-
     def italic_types_in_alternative(self, alt):
         n=''
         if alt.endswith('+'):

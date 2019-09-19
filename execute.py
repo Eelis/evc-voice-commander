@@ -51,41 +51,41 @@ def load_yaml(f):
         return yaml.load(stream, yaml.CLoader)
 
 def load_config():
-    global word_replacements, numbers, eclc, completions, short_mode_names, auto_enable_cfg
-    short_mode_names = {}
-    auto_enable_cfg = {}
+    global word_replacements, numbers
     word_replacements = load_yaml(configdir + '/replacements.yaml')
     numbers = load_yaml(configdir + '/numbers.yaml')
     modes = load_yaml(configdir + '/modes.yaml')
 
     # handle enums:
-    eclc.enums = {}
-    completions = {}
+    enums = {}
+    new_completions = {}
     for key, v in modes.items():
         if key.startswith('<'):
             n = key[1:-1]
             if type(v) is dict:
                 if 'completions' in v:
-                    completions[n] = v['completions']
+                    new_completions[n] = v['completions']
                 v = v['forms']
             if type(v) is list: v = '/'.join(v)
-            eclc.enums[n] = v
-    for e in eclc.enums:
+            enums[n] = v
+    for e in enums:
         del modes['<' + e + '>']
 
     # handle shortnames:
     def remove_shortname(s):
         i = s.find('(')
         return (s if i == -1 else s[:i].strip())
+    new_short_mode_names = {}
     for mode, aliases in modes.items():
         realname = remove_shortname(mode)
         if realname != mode:
             shortname = mode[mode.find('(') + 1: -1]
-            short_mode_names[realname] = shortname
+            new_short_mode_names[realname] = shortname
     modes = dict([(remove_shortname(m), a) for m, a in modes.items()])
 
+    new_auto_enable_cfg = {}
     # handle auto-enabling:
-    eclc.always_on_modes = []
+    always_on_modes = []
     for mode, aliases in modes.items():
         if type(aliases) is not dict: raise Exception(mode + " is not a dict")
         cfg = {}
@@ -99,9 +99,9 @@ def load_config():
         cfg['for-leaf-applications'] = (cfg['for-leaf-applications'].split() if 'for-leaf-applications' in cfg else [])
         if 'for-prefixes' not in cfg: cfg['for-prefixes'] = []
         if 'for-suffixes' not in cfg: cfg['for-suffixes'] = []
-        auto_enable_cfg[mode] = cfg
+        new_auto_enable_cfg[mode] = cfg
 
-        if cfg['always']: eclc.always_on_modes.append(mode)
+        if cfg['always']: always_on_modes.append(mode)
 
     # validate types and expansions:
     for mode, aliases in modes.items():
@@ -121,10 +121,19 @@ def load_config():
                         if a.endswith('+'): a = a[:-1]
                         if a.startswith('<'):
                             t = a[1:-1]
-                            if not eclc.is_type(t):
+                            if not eclbuiltins.is_builtin_type(t) and not t in enums:
                                 raise Exception(mode + ": " + pattern + ": no such type: " + t)
 
+    # commit
+
+    global completions, short_mode_names, auto_enable_cfg
+
     eclc.modes = modes
+    eclc.enums = enums
+    eclc.always_on_modes = always_on_modes
+    auto_enable_cfg = new_auto_enable_cfg
+    short_mode_names = new_short_mode_names
+    completions = new_completions
 
 cmdline_modes = []
 def mode_is_auto_enabled(candidate):

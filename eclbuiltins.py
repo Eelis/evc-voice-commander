@@ -82,6 +82,9 @@ builtin_types = {
     'key': is_keyname,
 }
 
+def is_builtin_type(t):
+    return t in builtin_types or t in ['mode', 'command']
+
 #######################################
 
 @make_builtin('set <word> <word>')
