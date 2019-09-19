@@ -236,6 +236,7 @@ ignore_lines = ['', 'if']
 def maybe_pick_suggestion(words):
     i = -1
     if len(suggestions) == 1 and words == ['yes']: i = 0
+    if len(suggestions) > 1 and len(words) == 1 and words[0].isdigit(): i = int(words[0]) - 1
     if len(words) == 3 and words[:2] == ["yes", "the"]: i = util.ordinal(words[2])
     if len(words) == 2 and words[0] == 'yes' and words[1].isdigit():
         i = int(words[1]) - 1
