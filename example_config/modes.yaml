@@ -60,6 +60,10 @@ control ():
     word <word> is among <word>: builtin $1 equals $4
     word <word> is among <word> <word>+: $(builtin $1 equals $4) or $(word $1 is among $5)
 
+    stop/silence/enough already/shut the fuck up/let me be:
+        builtin set dictation false
+        builtin mode default
+
 # main modes:
 
 default (): # the () specifies an empty prompt string, meaning 'omit this mode from the prompt'
@@ -68,9 +72,6 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
         built-ins: False # don't recognize so-called 'global built-ins' (e.g. 'options')
     computer|focus: builtin mode $0
     <screen>: focus $0
-    stop/silence/enough already/shut the fuck up/let me be:
-        builtin set dictation false
-        builtin mode default
 
 computer (comp): # general commands
     <ext-mode>: ~mode-map
