@@ -71,7 +71,9 @@ extra_key_names = {
     'comma': ',',
     'slash': '/',
     'control': 'ctrl',
-    'wmkey': 'winleft'
+    'wmkey': 'winleft',
+    'single quote': "'",
+    'double quote': '"',
 }
 
 builtin_types = {
