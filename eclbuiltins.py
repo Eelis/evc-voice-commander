@@ -158,7 +158,8 @@ def cmd_execute(ctx, _, cmd):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE).stdout.read().decode('utf-8').strip()
-    cmd_print(ctx, 'print', output)
+    if output != '':
+        print(ctx['ecl'].colored(output, 'magenta'))
 
 startup_cwd = os.getcwd()
 
