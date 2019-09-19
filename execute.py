@@ -206,7 +206,12 @@ def eval_command(words, line, enabled_modes, ignore_0match):
 
     handle_builtins = auto_enable_cfg[mode]['built-ins']
 
-    pr = eclc.match_commands(words, enabled_modes, handle_builtins)
+    try:
+        pr = eclc.match_commands(words, enabled_modes, handle_builtins)
+    except Exception as e:
+        print(colored(' '.join(words) + ": " + str(e), 'red'))
+        return 0
+
     if pr.longest != 0:
         suggestions = list(set([y for x in pr.missing for y in get_suggestions(x, eclc.enums)]))
         suggestions.sort()
