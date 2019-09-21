@@ -124,8 +124,10 @@ def print_suggestions(eclc, suggestions):
     else:
         print(eclc.colored('error: expected:', 'red'))
         i = 1
-        for l in literal_sugs:
-            print('-', eclc.color_commands(l), "(" + str(i) + ')')
+        for l, incomplete in literal_sugs:
+            print('-', eclc.color_commands(' '.join(l)), end='')
+            if incomplete: print(' ...', end='')
+            print(' (' + str(i) + ')')
             i += 1
         for t, sugs in type_sugs:
             print('-', util.a_or_an(t), eclc.color_commands(decorate_type(t)), end='')

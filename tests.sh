@@ -116,3 +116,9 @@ t focus change new
 
 t computer what time
     #> error: did you mean 'is it'?
+
+t --modes=zsh,computer change
+    #> error: expected:
+    #> - commands (1)
+    #> - directory ... (2)
+    #> - replacements (3)
