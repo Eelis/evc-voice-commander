@@ -2,6 +2,7 @@
 
 import ecl
 import eclbuiltins
+import eclcompletion
 import util
 import os
 import subprocess
@@ -116,7 +117,7 @@ def load_config():
                     raise Exception(mode + ": " + pattern + ": ~" + redir + ": no such mode")
             for f in ecl.forms(pattern):
                 for p in ecl.params(f):
-                    for t in ecl.types_in_param(p):
+                    for t in eclcompletion.types_in_param(p):
                         if not eclbuiltins.is_builtin_type(t) and not t in enums:
                             raise Exception(mode + ": " + pattern + ": no such type: " + t)
 
@@ -188,7 +189,7 @@ def eval_command(words, line, enabled_modes, ignore_0match):
         return 0
 
     if pr.longest != 0 and pr.missing != []:
-        suggestions = eclc.get_suggestions(words[:pr.longest], pr.missing, enabled_modes, handle_builtins)
+        suggestions = eclcompletion.get_suggestions(eclc, words[:pr.longest], pr.missing, enabled_modes, handle_builtins)
     c = confirm_input(words, pr, line, ignore_0match)
     if pr.new_mode is not None:
         mode = pr.new_mode
@@ -299,9 +300,6 @@ def print_prompt():
     print(prompt_string(), end='')
     sys.stdout.flush()
 
-def decorate_type(t):
-    return eclc.italic_types_in_alternative('<' + t + '>')
-
 def confirm_input(words, pr, original_input, ignore_0match):
     n = pr.longest
     cols = shutil.get_terminal_size().columns
@@ -360,45 +358,7 @@ def confirm_input(words, pr, original_input, ignore_0match):
     elif n != len(words) and pr.missing == ['<command>']:
         print(colored('error: no such command', 'red'))
     elif suggestions is not None:
-        literal_sugs, type_sugs, emptytype_sugs = suggestions
-        if len(literal_sugs) == 1 and type_sugs == [] and emptytype_sugs == []:
-            print(colored("error: did you mean '" + ' '.join(literal_sugs[0][0]) + "'?", 'red'))
-        elif literal_sugs == [] and len(emptytype_sugs) == 1 and type_sugs == []:
-            t = emptytype_sugs[0]
-            print(colored('error: expected ' + util.a_or_an(t) + ' ' + decorate_type(t), 'red'))
-        elif literal_sugs == [] and emptytype_sugs == [] and len(type_sugs) == 1:
-            t, sugs = type_sugs[0]
-            print(colored('error: expected ' + util.a_or_an(t) + ' ' + decorate_type(t) + ':\n  ', 'red'), end='')
-            i = 1
-            first = True
-            for s, more in sugs:
-                if not first: print(' / ', end='')
-                print(eclc.color_commands(s) + ' ', end='')
-                if more: print('... ', end='')
-                print("(" + str(i) + ')', end='')
-                i += 1
-                first = False
-            print()
-        else:
-            print(colored('error: expected:', 'red'))
-            i = 1
-            for l in literal_sugs:
-                print('-', eclc.color_commands(l), "(" + str(i) + ')')
-                i += 1
-            for t, sugs in type_sugs:
-                print('-', util.a_or_an(t), eclc.color_commands(decorate_type(t)), end='')
-                print(': ', end='')
-                first = True
-                for s, more in sugs:
-                    if not first: print(' / ', end='')
-                    print(eclc.color_commands(' '.join(s)) + ' ', end='')
-                    if more: print('... ', end='')
-                    print("(" + str(i) + ')', end='')
-                    i += 1
-                    first = False
-                print()
-            if emptytype_sugs != []:
-                print('-', util.commas_or([util.a_or_an(t) + ' ' + eclc.color_commands(decorate_type(t)) for t in emptytype_sugs]))
+        eclcompletion.print_suggestions(eclc, suggestions)
     else:
         problem = ('missing' if n == len(words) else 'expected')
         problem += ' ' + ' or '.join(map(eclc.italic_types_in_alternative, list(set(pr.missing))))
