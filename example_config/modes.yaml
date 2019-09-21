@@ -328,6 +328,13 @@ gitk:
     change <target>: focus change $1
     finish: press control q
 
+sound:
+    playback: builtin run pavucontrol --tab 1
+    recording: builtin run pavucontrol --tab 2
+    output devices: builtin run pavucontrol --tab 3
+    input devices: builtin run pavucontrol --tab 4
+    # todo: louder, mute, etc
+
 python-repl (python):
     auto-enable: { for-leaf-applications: python3 }
     press <word>+: ~computer
