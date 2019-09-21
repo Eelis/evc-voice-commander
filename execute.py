@@ -355,7 +355,9 @@ def confirm_input(words, pr, original_input, ignore_0match):
 
     if pr.missing == []:
         if pr.retval is not None:
-            print(colored(str(pr.retval), 'magenta'))
+            s = str(pr.retval)
+            if not s.endswith('\n'): s += '\n'
+            print(s, end='')
     elif n != len(words) and pr.missing == ['<command>']:
         print(colored('error: no such command', 'red'))
     elif suggestions is not None:

@@ -263,19 +263,19 @@ def cmd_define(ctx, _, braced_cmd):
                 print()
                 return
 
-@make_builtin('options')
+@make_functional_builtin('options')
 def cmd_options(ctx, _):
     mm = ctx['enabled_modes']
     e = ctx['ecl']
-    print()
+    output = '\n'
     builtins_displayed = []
     modes = e.modes
 
     def command_pattern(pat):
-        return e.color_commands(e.italic_types(pat)) + ', '
+        return e.color_commands(e.italic_types_in_pattern(pat)) + ', '
 
     def simple_pattern(pat):
-        return e.italic_types(pat) + ', '
+        return e.italic_types_in_pattern(pat) + ', '
 
     for m in mm:
         indent = len(m) + len("in : ")
@@ -300,16 +300,17 @@ def cmd_options(ctx, _):
             if pat in modes and pat != m and exp == 'builtin mode ' + pat:
                 l.append(e.color_mode(pat) + ', ')
         if l != []:
-            print('in', e.color_mode(m) + ': ', end='')
+            output += 'in ' + e.color_mode(m) + ': '
             s = l[-1]; l[-1] = s[:-2] # remove last comma
-            print(util.indented_and_wrapped(l, indent), end='\n\n')
+            output += util.indented_and_wrapped(l, indent) + '\n\n'
 
-    l = [e.italic_types(b) + ', ' for b in builtin_commands.keys() if ecl.is_global_builtin_pattern(b)]
+    l = [e.italic_types_in_pattern(b) + ', ' for b in builtin_commands.keys() if ecl.is_global_builtin_pattern(b)]
     if l != []:
-        print('global: ', end='')
+        output += 'global: '
         indent = len('global: ')
         s = l[-1]; l[-1] = s[:-2] # remove last comma
-        print(util.indented_and_wrapped(l, indent), end='\n\n')
+        output += util.indented_and_wrapped(l, indent) + '\n\n'
+    return output
 
 @make_builtin('text <word>+')
 def cmd_text(_ctx, _, s):
