@@ -38,7 +38,7 @@ current_windowprocesses = {}
 # evc state:
 mode = 'default'
 completions = {}
-suggestions = []
+suggestions = None
 good_beep = None
 bad_beep = None
 
@@ -60,14 +60,14 @@ def load_config():
     enums = {}
     new_completions = {}
     for key, v in modes.items():
-        if key.startswith('<'):
-            n = key[1:-1]
+        t = ecl.parse_type(key)
+        if t is not None:
             if type(v) is dict:
                 if 'completions' in v:
-                    new_completions[n] = v['completions']
+                    new_completions[t] = v['completions']
                 v = v['forms']
             if type(v) is list: v = '/'.join(v)
-            enums[n] = v
+            enums[t] = v
     for e in enums:
         del modes['<' + e + '>']
 
@@ -117,12 +117,9 @@ def load_config():
                     raise Exception(mode + ": " + pattern + ": ~" + redir + ": no such mode")
             for f in ecl.forms(pattern):
                 for p in ecl.params(f):
-                    for a in ecl.alternatives(p):
-                        if a.endswith('+'): a = a[:-1]
-                        if a.startswith('<'):
-                            t = a[1:-1]
-                            if not eclbuiltins.is_builtin_type(t) and not t in enums:
-                                raise Exception(mode + ": " + pattern + ": no such type: " + t)
+                    for t in ecl.types_in_param(p):
+                        if not eclbuiltins.is_builtin_type(t) and not t in enums:
+                            raise Exception(mode + ": " + pattern + ": no such type: " + t)
 
     # commit
 
@@ -179,26 +176,55 @@ def replace_words(words):
                     return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
-def get_suggestions_for_type(type, enums):
-    if type in completions:
-        return subprocess.Popen(completions[type], shell=True,
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
-    if type in enums:
-        return [x for form in ecl.forms(enums[type])
-                  for x in get_suggestions(ecl.params(form)[0], enums)]
-    return ['<' + type + '>']
+def get_suggestions(missing, enums):
+    literals = []
+    types_todo = []
 
-def suggestions_for_alternative(alt, enums):
-    if alt.endswith('+'): alt = alt[:-1]
-    if alt.startswith('<'):
-        type = alt[1:-1]
-        return get_suggestions_for_type(type, enums)
-    return [alt]
+    for param in missing:
+        literals += ecl.literals_in_param(param)
+        types_todo += ecl.types_in_param(param)
 
-def get_suggestions(param, enums):
-    return [sug for alt in ecl.alternatives(param)
-                for sug in suggestions_for_alternative(alt, enums)]
+    types_done = []
+    while types_todo != []:
+        t = types_todo[0]
+        types_todo = types_todo[1:]
+        if t in types_done: continue
+        types_done.append(t)
+        if t in enums:
+            for form in ecl.forms(enums[t]):
+                types_todo += ecl.types_in_param(ecl.params(form)[0])
+    rt = []
+    for type in types_done:
+        l = []
+        if type in completions:
+            u = subprocess.Popen(completions[type], shell=True,
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
+            l = [(x, False) for x in u]
+        if type in enums:
+            for form in ecl.forms(enums[type]):
+                params = ecl.params(form)
+                for alt in ecl.literals_in_param(params[0]):
+                    l.append((alt, len(params) > 1))
+            if l != []: rt.append((type, l))
+        else:
+            rt.append((type, l))
+
+    lits = []
+    for l in literals:
+        found = False
+        for t, x in rt:
+            for y, _ in x:
+                if l == y: found = True
+        if not found:
+            lits.append(l)
+    lits = list(set(lits))
+    lits.sort()
+
+    ne = [(x, l) for x, l in rt if l != []]
+    e = [x for x, l in rt if l == []]
+
+    return (lits, ne, e)
 
 def eval_command(words, line, enabled_modes, ignore_0match):
     global suggestions, mode
@@ -213,8 +239,7 @@ def eval_command(words, line, enabled_modes, ignore_0match):
         return 0
 
     if pr.longest != 0:
-        suggestions = list(set([y for x in pr.missing for y in get_suggestions(x, eclc.enums)]))
-        suggestions.sort()
+        suggestions = get_suggestions(pr.missing, eclc.enums)
     c = confirm_input(words, pr, line, ignore_0match)
     if pr.new_mode is not None:
         mode = pr.new_mode
@@ -238,14 +263,18 @@ def eval_command(words, line, enabled_modes, ignore_0match):
 
 ignore_lines = ['', 'if']
 
-def maybe_pick_suggestion(words):
+def linear_suggestions(suggestions):
+    r, type_sugs, _ = suggestions
+    return r + [x for _, l in type_sugs for x, _ in l]
+
+def maybe_pick_suggestion(words, linsugs):
     i = -1
-    if len(suggestions) == 1 and words == ['yes']: i = 0
-    if len(suggestions) > 1 and len(words) == 1 and words[0].isdigit(): i = int(words[0]) - 1
+    if len(linsugs) == 1 and words == ['yes']: i = 0
+    if len(linsugs) > 1 and len(words) == 1 and words[0].isdigit(): i = int(words[0]) - 1
     if len(words) == 3 and words[:2] == ["yes", "the"]: i = util.ordinal(words[2])
     if len(words) == 2 and words[0] == 'yes' and words[1].isdigit():
         i = int(words[1]) - 1
-    return (i if 0 <= i and i < len(suggestions) else None)
+    return (i if 0 <= i and i < len(linsugs) else None)
 
 async def process_lines(input):
     import asyncio
@@ -291,9 +320,10 @@ async def process_lines(input):
                 words.pop(0)
             if words != []:
                 if words[0] == 'continue': words = successful_input + words[1:]
-                else:
-                    p = maybe_pick_suggestion(words)
-                    if p is not None: words = successful_input + [suggestions[p]]
+                elif suggestions is not None:
+                    linsugs = linear_suggestions(suggestions)
+                    p = maybe_pick_suggestion(words, linsugs)
+                    if p is not None: words = successful_input + [linsugs[p]]
 
                 enabled_modes = get_active_modes()
                 longest = eval_command(words, line, enabled_modes, True)
@@ -324,6 +354,9 @@ def prompt_string():
 def print_prompt():
     print(prompt_string(), end='')
     sys.stdout.flush()
+
+def decorate_type(t):
+    return eclc.italic_types_in_alternative('<' + t + '>')
 
 def confirm_input(words, pr, original_input, ignore_0match):
     n = pr.longest
@@ -382,14 +415,46 @@ def confirm_input(words, pr, original_input, ignore_0match):
             print(colored(str(pr.retval), 'magenta'))
     elif n != len(words) and pr.missing == ['<command>']:
         print(colored('error: no such command', 'red'))
-    elif suggestions != []:
-        if len(suggestions) == 1 and not suggestions[0].startswith('<'):
-            print(colored("error: did you mean '" + suggestions[0] + "'?", 'red'))
+    elif suggestions is not None:
+        literal_sugs, type_sugs, emptytype_sugs = suggestions
+        if len(literal_sugs) == 1 and type_sugs == [] and emptytype_sugs == []:
+            print(colored("error: did you mean '" + literal_sugs[0] + "'?", 'red'))
+        elif literal_sugs == [] and len(emptytype_sugs) == 1 and type_sugs == []:
+            t = emptytype_sugs[0]
+            print(colored('error: expected ' + util.a_or_an(t) + ' ' + decorate_type(t), 'red'))
+        elif literal_sugs == [] and emptytype_sugs == [] and len(type_sugs) == 1:
+            t, sugs = type_sugs[0]
+            print(colored('error: expected ' + util.a_or_an(t) + ' ' + decorate_type(t) + ':\n  ', 'red'), end='')
+            i = 1
+            first = True
+            for s, more in sugs:
+                if not first: print(' / ', end='')
+                print(eclc.color_commands(s) + ' ', end='')
+                if more: print('... ', end='')
+                print("(" + str(i) + ')', end='')
+                i += 1
+                first = False
+            print()
         else:
-            print(colored("did you mean:", 'red'))
-            rows = shutil.get_terminal_size().lines
-            for i, s in enumerate(suggestions[:rows - 3]):
-                print('-', s, '(' + str(i + 1) + ')')
+            print(colored('error: expected:', 'red'))
+            i = 1
+            for l in literal_sugs:
+                print('-', eclc.color_commands(l), "(" + str(i) + ')')
+                i += 1
+            for t, sugs in type_sugs:
+                print('-', util.a_or_an(t), eclc.color_commands(decorate_type(t)), end='')
+                print(': ', end='')
+                first = True
+                for s, more in sugs:
+                    if not first: print(' / ', end='')
+                    print(eclc.color_commands(s) + ' ', end='')
+                    if more: print('... ', end='')
+                    print("(" + str(i) + ')', end='')
+                    i += 1
+                    first = False
+                print()
+            if emptytype_sugs != []:
+                print('-', util.commas_or([util.a_or_an(t) + ' ' + eclc.color_commands(decorate_type(t)) for t in emptytype_sugs]))
     else:
         problem = ('missing' if n == len(words) else 'expected')
         problem += ' ' + ' or '.join(map(eclc.italic_types_in_alternative, list(set(pr.missing))))

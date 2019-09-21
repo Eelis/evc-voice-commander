@@ -6,10 +6,9 @@
 <direction>: <hdir>/<vdir>
 <nextprev>: next/previous
 
-<duration>:
-    - <number> seconds
-    - <number> minutes
-    - <number> hours
+<plural-time-unit>: seconds|minutes|hours|days|weeks|months|years
+
+<duration>: <number> <plural-time-unit>
 
 duration:
     calculate: builtin mode $0

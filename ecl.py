@@ -33,9 +33,27 @@ def is_global_builtin_pattern(pat):
     while pat != [] and pat[0][0] == '<': pat = pat[1:]
     return pat != [] and pat[0] in global_builtins
 
+def parse_type(s):
+    return s[1:-1] if s.startswith('<') else None
+
 def forms(pattern): return pattern.split('/')
 def params(form): return form.split(' ')
 def alternatives(param): return param.split('|')
+
+def types_in_param(param):
+    r = []
+    for alt in alternatives(param):
+        if alt.endswith('+'): alt = alt[:-1]
+        t = parse_type(alt)
+        if t is not None: r.append(t)
+    return r
+
+def literals_in_param(param):
+    r = []
+    for alt in alternatives(param):
+        if alt.endswith('+'): alt = alt[:-1]
+        if parse_type(alt) is None: r.append(alt)
+    return r
 
 class Context():
     def __init__(self):
@@ -57,7 +75,8 @@ class Context():
         if alt.endswith('+'):
             n = '+'
             alt = alt[:-1]
-        return (self.italic(alt[1:-1]) if alt.startswith('<') else alt) + n
+        typ = parse_type(alt)
+        return (self.italic(typ) if typ is not None else alt) + n
 
     def italic_types_in_pattern(self, pattern):
         return '/'.join(
@@ -105,8 +124,8 @@ class Context():
                 r.missing = []
                 r.retval = arg
                 break
-            if alt.startswith('<'):
-                type = alt[1:-1]
+            type = parse_type(alt)
+            if type is not None:
                 r.try_improve(self.match_type(param, args, type, enabled_modes))
                 if r.retval is not None:
                     r.retval = ' '.join(r.retval)

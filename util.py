@@ -213,3 +213,11 @@ def get_current_application():
 
 def ordinal(s):
     return "first second third fourth fifth sixth seventh eighth ninth tenth eleventh".split().index(s)
+
+def commas_or(x):
+    if len(x) == 1: return x[0]
+    if len(x) == 2: return x[0] + ' or ' + x[1]
+    return x[0] + ', ' + commas_or(x[1:])
+
+def a_or_an(s):
+    return 'an' if s.startswith('aeoiu') else 'a'

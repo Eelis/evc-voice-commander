@@ -101,3 +101,12 @@ t computer focus 2 times left
     #> press wmkey left, press wmkey left
 t computer focus left 2 times
     #> press wmkey left, press wmkey left
+
+t focus change lol
+    #> error: expected:
+    #> - a target: frame ... (1) / new ... (2)
+    #> - a screen: mexico (3) / germany (4) / india (5)
+    #> - a nextprev: next (6) / previous (7)
+    #> - a hdir: left (8) / right (9)
+    #> - a vdir: up (10) / down (11)
+    #> - a number
