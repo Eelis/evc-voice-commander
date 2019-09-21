@@ -55,6 +55,17 @@ def literals_in_param(param):
         if parse_type(alt) is None: r.append(alt)
     return r
 
+def linear_suggestions(suggestions):
+    r, type_sugs, _ = suggestions
+    return r + [x for _, l in type_sugs for x, _ in l]
+
+def only_choice(sugs):
+    lits, types, empty_types = sugs
+    if empty_types != []: return None
+    if len(lits) == 1 and types == []:
+        return lits[0][0]
+    return None
+
 class Context():
     def __init__(self):
         self.modes = {}
@@ -365,5 +376,73 @@ class Context():
                         if r2.new_mode is not None:
                             r.new_mode = r2.new_mode
                         r.retval = r2.retval
-
         return r
+
+    def definite_missing_arguments(self, goodwords, enabled_modes, handle_builtins):
+        more = []
+        incomplete = True
+        while True:
+            pr = self.match_commands(goodwords + more, enabled_modes, handle_builtins)
+            if pr.longest == len(goodwords + more) and pr.error is None and pr.missing == []:
+                incomplete = False
+                break
+            if pr.longest < len(goodwords) + len(more): break
+            if pr.missing == [] or pr.error is not None: break
+            sugs = self.get_suggestions(goodwords + more, pr.missing, enabled_modes, handle_builtins)
+            c = only_choice(sugs)
+            if c is None: break
+            more += c
+        return (more, incomplete)
+
+    def get_suggestions(self, goodwords, missing, enabled_modes, handle_builtins):
+        if missing == []:
+            return ([], [], [])
+
+        # find all types the command could continue with:
+        types_todo = []
+        for param in missing: types_todo += types_in_param(param)
+        types_done = []
+        while types_todo != []:
+            t, *types_todo = types_todo
+            if t in types_done: continue
+            types_done.append(t)
+            if t in self.enums:
+                for form in forms(self.enums[t]):
+                    types_todo += types_in_param(params(form)[0])
+
+        # find their corresponding completions:
+        rt = []
+        for type in types_done:
+            l = []
+            if type in self.completions:
+                l = subprocess.Popen(self.completions[type], shell=True,
+                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
+            if type in self.enums:
+                for form in forms(self.enums[type]):
+                    l += literals_in_param(params(form)[0])
+            if l != [] or type not in self.enums:
+                ul = []
+                for x in l:
+                    more, incomplete = self.definite_missing_arguments(goodwords + [x], enabled_modes, handle_builtins)
+                    ul.append(([x] + more, incomplete))
+                rt.append((type, ul))
+
+        # get literals (that aren't already listed for one of the types):
+        lits = list(set(
+            [l for param in missing
+                for l in literals_in_param(param)
+                 if not any([l == y for _, x in rt for y, _ in x])]))
+        lits.sort()
+
+        # extend literals
+        newlits = []
+        for x in lits:
+            y, incomplete = self.definite_missing_arguments(goodwords + [x], enabled_modes, handle_builtins)
+            newlits.append(([x] + y, incomplete))
+
+        # partition types by whether they have suggestions:
+        ne = [(x, l) for x, l in rt if l != []]
+        e = [x for x, l in rt if l == []]
+
+        return (newlits, ne, e)

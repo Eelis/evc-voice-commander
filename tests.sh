@@ -104,9 +104,15 @@ t computer focus left 2 times
 
 t focus change lol
     #> error: expected:
-    #> - a target: frame ... (1) / new ... (2)
+    #> - a target: frame ... (1) / new work space (2)
     #> - a screen: mexico (3) / germany (4) / india (5)
-    #> - a nextprev: next (6) / previous (7)
+    #> - a nextprev: next ... (6) / previous ... (7)
     #> - a hdir: left (8) / right (9)
     #> - a vdir: up (10) / down (11)
     #> - a number
+
+t focus change new
+    #> error: did you mean 'work space'?
+
+t computer what time
+    #> error: did you mean 'is it'?

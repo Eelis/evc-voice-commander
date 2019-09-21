@@ -37,7 +37,6 @@ current_windowprocesses = {}
 
 # evc state:
 mode = 'default'
-completions = {}
 suggestions = None
 good_beep = None
 bad_beep = None
@@ -123,14 +122,14 @@ def load_config():
 
     # commit
 
-    global completions, short_mode_names, auto_enable_cfg
+    global short_mode_names, auto_enable_cfg
 
     eclc.modes = modes
     eclc.enums = enums
     eclc.always_on_modes = always_on_modes
     auto_enable_cfg = new_auto_enable_cfg
     short_mode_names = new_short_mode_names
-    completions = new_completions
+    eclc.completions = new_completions
 
 cmdline_modes = []
 def mode_is_auto_enabled(candidate):
@@ -176,56 +175,6 @@ def replace_words(words):
                     return words[:i] + k.split() + replace_words(words[i+len(kw):])
     return words
 
-def get_suggestions(missing, enums):
-    literals = []
-    types_todo = []
-
-    for param in missing:
-        literals += ecl.literals_in_param(param)
-        types_todo += ecl.types_in_param(param)
-
-    types_done = []
-    while types_todo != []:
-        t = types_todo[0]
-        types_todo = types_todo[1:]
-        if t in types_done: continue
-        types_done.append(t)
-        if t in enums:
-            for form in ecl.forms(enums[t]):
-                types_todo += ecl.types_in_param(ecl.params(form)[0])
-    rt = []
-    for type in types_done:
-        l = []
-        if type in completions:
-            u = subprocess.Popen(completions[type], shell=True,
-                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL).stdout.read().decode('utf-8').strip().split('\n')
-            l = [(x, False) for x in u]
-        if type in enums:
-            for form in ecl.forms(enums[type]):
-                params = ecl.params(form)
-                for alt in ecl.literals_in_param(params[0]):
-                    l.append((alt, len(params) > 1))
-            if l != []: rt.append((type, l))
-        else:
-            rt.append((type, l))
-
-    lits = []
-    for l in literals:
-        found = False
-        for t, x in rt:
-            for y, _ in x:
-                if l == y: found = True
-        if not found:
-            lits.append(l)
-    lits = list(set(lits))
-    lits.sort()
-
-    ne = [(x, l) for x, l in rt if l != []]
-    e = [x for x, l in rt if l == []]
-
-    return (lits, ne, e)
-
 def eval_command(words, line, enabled_modes, ignore_0match):
     global suggestions, mode
     if words == []: return
@@ -238,8 +187,8 @@ def eval_command(words, line, enabled_modes, ignore_0match):
         print(colored(' '.join(words) + ": " + str(e), 'red'))
         return 0
 
-    if pr.longest != 0:
-        suggestions = get_suggestions(pr.missing, eclc.enums)
+    if pr.longest != 0 and pr.missing != []:
+        suggestions = eclc.get_suggestions(words[:pr.longest], pr.missing, enabled_modes, handle_builtins)
     c = confirm_input(words, pr, line, ignore_0match)
     if pr.new_mode is not None:
         mode = pr.new_mode
@@ -262,10 +211,6 @@ def eval_command(words, line, enabled_modes, ignore_0match):
     return pr.longest
 
 ignore_lines = ['', 'if']
-
-def linear_suggestions(suggestions):
-    r, type_sugs, _ = suggestions
-    return r + [x for _, l in type_sugs for x, _ in l]
 
 def maybe_pick_suggestion(words, linsugs):
     i = -1
@@ -321,10 +266,9 @@ async def process_lines(input):
             if words != []:
                 if words[0] == 'continue': words = successful_input + words[1:]
                 elif suggestions is not None:
-                    linsugs = linear_suggestions(suggestions)
+                    linsugs = ecl.linear_suggestions(suggestions)
                     p = maybe_pick_suggestion(words, linsugs)
-                    if p is not None: words = successful_input + [linsugs[p]]
-
+                    if p is not None: words = successful_input + linsugs[p][0]
                 enabled_modes = get_active_modes()
                 longest = eval_command(words, line, enabled_modes, True)
                 if longest != 0:
@@ -418,7 +362,7 @@ def confirm_input(words, pr, original_input, ignore_0match):
     elif suggestions is not None:
         literal_sugs, type_sugs, emptytype_sugs = suggestions
         if len(literal_sugs) == 1 and type_sugs == [] and emptytype_sugs == []:
-            print(colored("error: did you mean '" + literal_sugs[0] + "'?", 'red'))
+            print(colored("error: did you mean '" + ' '.join(literal_sugs[0][0]) + "'?", 'red'))
         elif literal_sugs == [] and len(emptytype_sugs) == 1 and type_sugs == []:
             t = emptytype_sugs[0]
             print(colored('error: expected ' + util.a_or_an(t) + ' ' + decorate_type(t), 'red'))
@@ -447,7 +391,7 @@ def confirm_input(words, pr, original_input, ignore_0match):
                 first = True
                 for s, more in sugs:
                     if not first: print(' / ', end='')
-                    print(eclc.color_commands(s) + ' ', end='')
+                    print(eclc.color_commands(' '.join(s)) + ' ', end='')
                     if more: print('... ', end='')
                     print("(" + str(i) + ')', end='')
                     i += 1
