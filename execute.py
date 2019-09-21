@@ -267,9 +267,10 @@ async def process_lines(input):
             if words != []:
                 if words[0] == 'continue': words = successful_input + words[1:]
                 elif suggestions is not None:
-                    linsugs = ecl.linear_suggestions(suggestions)
+                    linsugs = eclcompletion.linear_suggestions(suggestions)
                     p = maybe_pick_suggestion(words, linsugs)
-                    if p is not None: words = successful_input + linsugs[p][0]
+                    if p is not None:
+                        words = successful_input + linsugs[p]
                 enabled_modes = get_active_modes()
                 longest = eval_command(words, line, enabled_modes, True)
                 if longest != 0:
