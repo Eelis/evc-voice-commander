@@ -1,2 +1,2 @@
 #!/bin/sh
-./listen-kaldi | ./execute.py
+./listen-kaldi | python3 -O execute.py

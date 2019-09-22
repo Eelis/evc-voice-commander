@@ -8,57 +8,47 @@ import os
 import sys
 import util
 import random
+import pyautogui # type: ignore
+from typing import Dict, List, Tuple, Callable, Optional
 
-builtin_commands = {}
+builtin_commands: List[ecl.BuiltinCommand] = []
+global_builtins: List[ecl.BuiltinCommand] = []
 
 dryrun = False
 
-def make_builtin(pattern):
+def make_builtin(pattern: str) -> Callable[[Callable], Callable]:
     def f(g):
-        builtin_commands[pattern] = (None, g)
+        builtin_commands.append((ecl.parse_pattern(pattern), None, g))
         return g
     return f
 
-def make_functional_builtin(pattern):
+def make_global_builtin(pattern: str) -> Callable[[Callable], Callable]:
     def f(g):
-        builtin_commands[pattern] = (g, None)
+        global_builtins.append((ecl.parse_pattern(pattern), None, g))
         return g
     return f
 
-def key_by_name(name):
+def make_functional_builtin(pattern: str) -> Callable[[Callable], Callable]:
+    def f(g):
+        builtin_commands.append((ecl.parse_pattern(pattern), g, None))
+        return g
+    return f
+
+def make_global_functional_builtin(pattern: str) -> Callable[[Callable], Callable]:
+    def f(g):
+        global_builtins.append((ecl.parse_pattern(pattern), g, None))
+        return g
+    return f
+
+def key_by_name(name) -> str:
     return (extra_key_names[name] if name in extra_key_names else name)
 
-def is_keyname(s):
-    return s in keynames or s in extra_key_names
-
-keynames = ['\t', '\n', '\r', ' ', '!', '"', '#', '$', '%', '&', "'", '(',
-    ')', '*', '+', ',', '-', '.', '/', '0', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`',
-    'a', 'b', 'c', 'd', 'e','f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-    'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~',
-    'accept', 'add', 'alt', 'altleft', 'altright', 'apps', 'backspace',
-    'browserback', 'browserfavorites', 'browserforward', 'browserhome',
-    'browserrefresh', 'browsersearch', 'browserstop', 'capslock', 'clear',
-    'convert', 'ctrlleft', 'ctrlright', 'decimal', 'del', 'delete',
-    'divide', 'down', 'end', 'enter', 'esc', 'escape', 'execute', 'f1', 'f10',
-    'f11', 'f12', 'f13', 'f14', 'f15', 'f16', 'f17', 'f18', 'f19', 'f2', 'f20',
-    'f21', 'f22', 'f23', 'f24', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9',
-    'final', 'fn', 'hanguel', 'hangul', 'hanja', 'help', 'home', 'insert', 'junja',
-    'kana', 'kanji', 'launchapp1', 'launchapp2', 'launchmail',
-    'launchmediaselect', 'left', 'modechange', 'multiply', 'nexttrack',
-    'nonconvert', 'num0', 'num1', 'num2', 'num3', 'num4', 'num5', 'num6',
-    'num7', 'num8', 'num9', 'numlock', 'pagedown', 'pageup', 'pause', 'pgdn',
-    'pgup', 'playpause', 'prevtrack', 'print', 'printscreen', 'prntscrn',
-    'prtsc', 'prtscr', 'return', 'right', 'scrolllock', 'select', 'separator',
-    'shift', 'shiftleft', 'shiftright', 'sleep', 'space', 'stop', 'subtract', 'tab',
-    'up', 'volumedown', 'volumemute', 'volumeup', 'win', 'winleft', 'winright', 'yen',
-    'command', 'option', 'optionleft', 'optionright']
-        # these coincide with names in pyautogui
-        # (which we don't want to import just for this list because it takes ~60 milliseconds)
+def is_keyname(s) -> bool:
+    return s in pyautogui.KEY_NAMES or s in extra_key_names
 
 modifier_keys = ['shift', 'control', 'alt', 'wmkey']
 
-extra_key_names = {
+extra_key_names: Dict[str, str] = {
     'space': ' ',
     'dollar': '$',
     'ampersand': '&',
@@ -85,7 +75,7 @@ builtin_types = {
     'key': is_keyname,
 }
 
-def is_builtin_type(t):
+def is_builtin_type(t: ecl.Typename) -> bool:
     return t in builtin_types or t in ['mode', 'command']
 
 #######################################
@@ -100,7 +90,7 @@ def cmd_get(ctx, _get, var):
     e = ctx['ecl']
     return e.script_vars[var] if var in e.script_vars else 'undefined'
 
-jobs = {}
+jobs: Dict[int, str] = {}
 next_job_nr = 0
 
 @make_builtin('jobs')
@@ -171,13 +161,11 @@ def cmd_restart(_ctx, _restart, _commander):
 @make_builtin('keydown <key>')
 def cmd_keydown(_ctx, _keydown, key_name):
     if not dryrun:
-        import pyautogui
         pyautogui.keyDown(key_by_name(key_name))
 
 @make_builtin('keyup <key>')
 def cmd_keyup(_ctx, _keyup, key_name):
     if not dryrun:
-        import pyautogui
         pyautogui.keyUp(key_by_name(key_name))
 
 @make_builtin('shutdown commander')
@@ -202,7 +190,7 @@ def cmd_less_than(_ctx, x, _is, _less, _than, y):
     return "true" if int(x) < int(y) else "false"
 
 @make_functional_builtin('<number> is greater than <number>')
-def cmd_less_than(_ctx, x, _is, _greater_, _than, y):
+def cmd_greater_than(_ctx, x, _is, _greater_, _than, y):
     return "true" if int(x) > int(y) else "false"
 
 @make_functional_builtin('<word> equals <word>')
@@ -210,32 +198,32 @@ def cmd_equals(_ctx, x, _equals, y):
     return "true" if x == y else "false"
 
 @make_functional_builtin('enumindex <word> <word>')
-def cmd_enumindex(ctx, _, e, v):
-    l = ctx['ecl'].enums[e].split('/')
-    return l.index(v) if v in l else -1
+def cmd_enumindex(ctx, _, e: ecl.Typename, v: str):
+    pattern: ecl.Pattern = ctx['ecl'].enums[e]
+    form: ecl.Form = [[(v, False)]]
+    return pattern.index(form) if form in pattern else -1
 
-def print_builtin(e, pattern):
+def print_builtin(e: ecl.Context, pattern: ecl.Pattern, func: Callable):
     import inspect
-    _, func = builtin_commands[pattern]
-    print('\n' + e.color_commands(pattern), '= ', end='')
+    print('\n' + e.color_commands(e.render_pattern(pattern)), '= ', end='')
     lines = inspect.getsource(func).split('\n')
-    while lines != [] and lines[-1] == '':
+    while lines and lines[-1] == '':
         lines = lines[:-1]
-    if lines != [] and lines[0].startswith('@make_builtin'):
+    if lines and lines[0].startswith('@make_builtin'):
         lines = lines[1:]
     if len(lines) == 1:
         print(lines[0].strip().rstrip(','))
     else:
         print('\n' + '\n'.join(map(lambda s: '    ' + s, lines)), end = '\n\n')
 
-def strip_mode(words):
+def strip_mode(words: List[str]) -> Tuple[str, List[str]]:
     if words[:2] == ['builtin', 'mode'] and len(words) > 3:
         return (words[2], words[3:])
     elif words[:1] == ['builtin']:
         return ('builtin', words[1:])
     raise Exception("cannot determine mode of command: " + str(words))
 
-@make_builtin('define <command>')
+@make_global_builtin('define <command>')
 def cmd_define(ctx, _, braced_cmd):
     ecl = ctx['ecl']
 
@@ -250,41 +238,41 @@ def cmd_define(ctx, _, braced_cmd):
 
     mode, cmd = strip_mode(cmd)
     if mode == 'builtin':
-        for pattern, _ in builtin_commands.items():
+        for pattern, f, g in builtin_commands:
             pr = ecl.match_pattern(pattern, cmd, [])
-            if pr.longest > 0 and pr.missing == [] and pr.error is None:
-                print_builtin(ecl, pattern)
+            if pr.longest > 0 and not pr.missing and pr.error is None:
+                if f is None: f = g
+                if f is not None: print_builtin(ecl, pattern, f)
     else:
-        for pattern in ecl.modes[mode].keys():
+        for pattern, exp in ecl.modes[mode]:
             pr = ecl.match_pattern(pattern, cmd, [mode])
-            if pr.longest > 0 and pr.missing == [] and pr.error is None:
+            if pr.longest > 0 and not pr.missing and pr.error is None:
                 print('\nin ', end='')
-                print(ecl.alias_definition_str(mode, pattern, len('in ')))
+                print(ecl.alias_definition_str(mode, pattern, exp, len('in ')))
                 print()
                 return
 
-@make_functional_builtin('options')
+@make_global_functional_builtin('options')
 def cmd_options(ctx, _):
     mm = ctx['enabled_modes']
     e = ctx['ecl']
     output = '\n'
-    builtins_displayed = []
     modes = e.modes
 
     def command_pattern(pat):
         return e.color_commands(e.italic_types_in_pattern(pat)) + ', '
 
-    def simple_pattern(pat):
-        return e.italic_types_in_pattern(pat) + ', '
+    def simple_pattern(pat: ecl.Pattern):
+        return e.render_pattern(pat) + ', '
 
     for m in mm:
         indent = len(m) + len("in : ")
         l = []
         simples = []
-        for pat, exp in modes[m].items():
+        for pat, exp in modes[m]:
             if exp == 'builtin press $0': # todo
-                if len(pat.split()) == 1:
-                    for alt in pat.split('|'):
+                if len(pat) == 1:
+                    for alt in pat[0]:
                         simples.append(simple_pattern(alt))
                 else:
                     simples.append(simple_pattern(pat))
@@ -296,16 +284,16 @@ def cmd_options(ctx, _):
                         for alt in form.split('|'):
                             l.append(command_pattern(alt))
         l += simples
-        for pat, exp in modes[m].items():
-            if pat in modes and pat != m and exp == 'builtin mode ' + pat:
-                l.append(e.color_mode(pat) + ', ')
-        if l != []:
+        #for pat, exp in modes[m]:
+        #    if pat in modes and pat != m and exp == 'builtin mode ' + pat:
+        #        l.append(e.color_mode(pat) + ', ')
+        if l:
             output += 'in ' + e.color_mode(m) + ': '
             s = l[-1]; l[-1] = s[:-2] # remove last comma
             output += util.indented_and_wrapped(l, indent) + '\n\n'
 
-    l = [e.italic_types_in_pattern(b) + ', ' for b in builtin_commands.keys() if ecl.is_global_builtin_pattern(b)]
-    if l != []:
+    l = []#[e.italic_types_in_pattern(b) + ', ' for b, _ in builtin_commands if ecl.is_global_builtin_pattern(b)] # todo
+    if l:
         output += 'global: '
         indent = len('global: ')
         s = l[-1]; l[-1] = s[:-2] # remove last comma
@@ -315,10 +303,9 @@ def cmd_options(ctx, _):
 @make_builtin('text <word>+')
 def cmd_text(_ctx, _, s):
     if not dryrun:
-        import pyautogui
         pyautogui.press([c for c in s])
 
-builtin_commands['mode <mode>'] = (None, None)
+builtin_commands.append((ecl.parse_pattern('mode <mode>'), None, None))
 
 @make_functional_builtin('return <word>')
 def cmd_return(_ctx, _, w):
@@ -327,13 +314,12 @@ def cmd_return(_ctx, _, w):
 @make_builtin('press <key>+')
 def cmd_press(_ctx, _, spec):
     if dryrun: return
-    import pyautogui
     modifiers = []
     for key in util.split_expansion(spec):
         if key in modifier_keys:
             modifiers.append(key)
         else:
-            if modifiers == []:
+            if not modifiers:
                 key = key_by_name(key)
                 pyautogui.press([key])
             else:
@@ -347,5 +333,5 @@ def cmd_print(ctx, _, s):
     print(ctx['ecl'].colored(' '.join(util.split_expansion(s)), 'magenta'))
 
 @make_functional_builtin('randomint <number>')
-def cmd_return(_ctx, _randomint, max):
+def cmd_randomint(_ctx, _randomint, max):
     return str(random.randint(0, int(max) - 1))

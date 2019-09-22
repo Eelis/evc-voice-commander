@@ -2,18 +2,17 @@ import shutil
 import re
 import collections
 import subprocess
-import time
 import sys
+from typing import Dict, List, Tuple
 
-def escape(s):
-    x = ''
-    for c in s:
-        if c == '"': x += '\\"'
-        elif c == '\\': x += '\\\\'
-        else: x += c
-    return x
+def escape(s: str) -> str:
+    def f(c):
+        if c == '"': return '\\"'
+        elif c == '\\': return '\\\\'
+        else: return c
+    return ''.join(map(f, s))
 
-def quote_if_necessary(s):
+def quote_if_necessary(s: str) -> str:
     x = try_parse_braced_expr(s)
     if x is not None:
         _, rest = x
@@ -27,7 +26,7 @@ def strip_markup(s):
     return ansi_escape.sub('', s)
 
 def indented_and_wrapped(l, n):
-    cols = shutil.get_terminal_size().columns
+    cols = (shutil.get_terminal_size().columns if sys.stdout.isatty() else 120)
     cur = n
     r = ''
     l = [x + ' ' for x in ' '.join(l).split()]
@@ -44,7 +43,7 @@ def indented_and_wrapped(l, n):
     return r
 
 def process_family(pid):
-    import psutil
+    import psutil # type: ignore
     children = collections.defaultdict(list)
     for p in psutil.process_iter():
         try:
@@ -98,70 +97,68 @@ def occurs_as_leaf_in_branch(x, processes):
                 return True
     return not children and 'name' in processes and processes['name'] == x
 
-def parse_quoted_string(s):
+def parse_quoted_string(s: str) -> Tuple[str, str]:
     s = s[1:] # skip first "
-    x = ''
+    x: List[str] = []
+    append = x.append
     while not s.startswith('"'):
-        if s.startswith('\\"'):
-            x += '"'
-            s = s[2:]
-        elif s.startswith('\\\\'):
-            x += '\\'
-            s = s[2:]
-        else:
-            x += s[0]
-            s = s[1:]
+        if s.startswith('\\"'): append('"'); s = s[2:]
+        elif s.startswith('\\\\'): append('\\'); s = s[2:]
+        elif s == '': raise Exception('missing "')
+        else: append(s[0]); s = s[1:]
     s = s[1:] # skip final "
-    return (x, s)
+    return (''.join(x), s)
 
-def parse_basic_expression(s):
+def parse_basic_expression(s: str) -> Tuple[str, str]:
     curly_depth = 0
-    r = []
-    x = ''
+    x: List[str] = []
+    append = x.append
     while s != '':
         if s[0] == ' ':
             if curly_depth == 0: break
-            x += ' '
+            append(' ')
             s = s[1:]
         elif s[0] == '}':
             if curly_depth == 0:
                 raise Exception("unmatched }")
             curly_depth -= 1
-            x += '}'
+            append('}')
             s = s[1:]
         elif s[0] == '{':
             curly_depth += 1
-            x += '{'
+            append('{')
             s = s[1:]
         elif s[0] == '"':
-            if curly_depth != 0: x += '"'
+            if curly_depth != 0: append('"')
             y, s = parse_quoted_string(s)
-            x += y
-            if curly_depth != 0: x += '"'
+            append(y)
+            if curly_depth != 0: append('"')
         else:
-            x += s[0]
+            append(s[0])
             s = s[1:]
-    return (x, s)
+    return (''.join(x), s)
 
 def try_parse_braced_expr(s):
     if not s.startswith('{'):
         return None
-    r = []
+    r: List[str] = []
     s = s[1:].lstrip()
+    append = r.append
     while not s.startswith('}'):
-        if s == '': return None
+        if not s: return None
         y, s = parse_basic_expression(s)
-        if y == []: return None
-        r += [y]
+        if not y: return None
+        append(y)
         s = s.lstrip()
     return (r, s[1:])
 
-def split_expansion(s):
+def split_expansion(s: str) -> List[str]:
     s = s.lstrip()
-    r = []
-    while s != '':
+    r: List[str] = []
+    append = r.append
+    while s:
         y, s = parse_basic_expression(s)
-        r += [y]
+        append(y)
         s = s.lstrip()
     return r
 
