@@ -314,6 +314,23 @@ def confirm_input(words: List[str], pr, original_input, ignore_0match):
         print(printed, end='')
         sys.stdout.flush()
 
+    if prompt:
+        needed = 0
+        i = 0
+        while i < n:
+            needed += len(words[i])
+            if i + 1 < n: needed += len(' ')
+            i += 1
+        if n != len(words):
+            if n != 0: needed += len(' ')
+            needed += 5
+        elif pr.missing:
+            needed += len(' ???')
+        avail = cols - len(util.strip_markup(printed))
+        if needed > avail:
+            print('\n  ', end='')
+            printed = '  '
+
     if good_beep is not None and n != 0:
         good_beep.play(n - 1)
 
