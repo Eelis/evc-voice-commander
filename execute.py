@@ -45,7 +45,7 @@ current_windowtitle = ''
 current_windowprocesses = {}
 
 # evc state:
-mode = 'default'
+mode: ecl.Mode = 'default'
 suggestions = None
 good_beep = None
 bad_beep = None
@@ -332,11 +332,6 @@ def confirm_input(words: List[str], pr, original_input, ignore_0match):
     if bad_beep is not None and (n != len(words) or pr.missing or pr.error is not None):
         bad_beep.play()
 
-    if pr.error is not None:
-        print()
-        print(colored('error:', 'red'), pr.error)
-        return False
-
     if prompt:
         if n != len(words):
             if n != 0:
@@ -349,6 +344,11 @@ def confirm_input(words: List[str], pr, original_input, ignore_0match):
             # it means additional input was missing
             print(colored(' ???', 'red'), end='')
         print()
+
+    if pr.error is not None:
+        print()
+        print(colored('error:', 'red'), pr.error)
+        return False
 
     if not pr.missing:
         if pr.retval is not None:
@@ -428,9 +428,10 @@ home_dir: str = opt_home_dir
     # (b) won't interfere with speech recognition.
 @click.argument('cmd', nargs=-1)
 def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, cmd):
-    global cmdline_modes
+    global cmdline_modes, mode
 
     cmdline_modes = modes.split(',')
+    mode = cmdline_modes[0]
     globals()['color'] = color
     globals()['configdir'] = configdir
     globals()['appdir'] = appdir
