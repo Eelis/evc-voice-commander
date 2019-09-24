@@ -3,10 +3,10 @@ import re
 import collections
 import subprocess
 import sys
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 def escape(s: str) -> str:
-    def f(c):
+    def f(c: str) -> str:
         if c == '"': return '\\"'
         elif c == '\\': return '\\\\'
         else: return c
@@ -140,7 +140,7 @@ def parse_basic_expression(s: str) -> Tuple[str, str]:
             s = s[1:]
     return (''.join(x), s)
 
-def try_parse_braced_expr(s):
+def try_parse_braced_expr(s: str) -> Optional[Tuple[List[str], str]]:
     if not s.startswith('{'):
         return None
     r: List[str] = []
@@ -164,7 +164,7 @@ def split_expansion(s: str) -> List[str]:
         s = s.lstrip()
     return r
 
-def simple_subprocess(cmd):
+def simple_subprocess(cmd: str) -> str:
     p = subprocess.Popen(cmd, shell=True,
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return p.stdout.read().decode('utf-8').rstrip()
@@ -185,17 +185,17 @@ def print_pstree(t, indent=0):
             r += pre + print_pstree(v, indent)
     return r
 
-def italic(s):
+def italic(s: str) -> str:
     turn_on_italic = "\x1B[3m"
     turn_off_italic = "\x1B[23m"
     return turn_on_italic + s + turn_off_italic
 
-def clear_line():
+def clear_line() -> None:
     if not sys.stdout.isatty(): return
     sys.stdout.write('\033[2K\033[1G')
     sys.stdout.flush()
 
-def truncate(s, n):
+def truncate(s: str, n: int) -> str:
     return (s[:n-3] + '...' if len(s) > n else s)
 
 def get_current_application():
@@ -209,13 +209,13 @@ def get_current_application():
             current_windowprocesses = process_family(int(current_windowpid))
     return (current_windowtitle, current_windowprocesses)
 
-def ordinal(s):
+def ordinal(s: str) -> int:
     return "first second third fourth fifth sixth seventh eighth ninth tenth eleventh".split().index(s)
 
-def commas_or(x):
+def commas_or(x: List[str]) -> str:
     if len(x) == 1: return x[0]
     if len(x) == 2: return x[0] + ' or ' + x[1]
     return x[0] + ', ' + commas_or(x[1:])
 
-def a_or_an(s):
+def a_or_an(s: str) -> str:
     return 'an' if s.startswith('aeoiu') else 'a'

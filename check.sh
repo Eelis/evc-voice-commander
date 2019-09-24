@@ -1,2 +1,2 @@
 #!/bin/bash
-mypy --check-untyped-defs execute.py
+mypy --ignore-missing-imports --disallow-untyped-calls --disallow-untyped-defs execute.py
