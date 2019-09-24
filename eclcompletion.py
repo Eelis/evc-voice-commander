@@ -114,15 +114,15 @@ def print_suggestions(eclc, suggestions: Suggestions):
         t, sugs = suggestions.types_with_sugs[0]
         print(eclc.colored('error: expected ' + util.a_or_an(t) + ' ' + eclc.render_type(t) + ':\n  ', 'red'), end='')
         i = 1
-        first = True
+        l = []
         for s, more in sugs:
-            if not first: print(' / ', end='')
-            print(eclc.color_commands(s) + ' ', end='')
-            if more: print('... ', end='')
-            print("(" + str(i) + ')', end='')
+            y = eclc.color_commands(' '.join(s)) + ' '
+            if more: y += '... '
+            y += '(' + str(i) + ')'
             i += 1
-            first = False
-        print()
+            l.append(y)
+            l.append(' / ')
+        print(util.indented_and_wrapped(l[:-1], 2))
     else:
         print(eclc.colored('error: expected:', 'red'))
         i = 1
@@ -132,16 +132,16 @@ def print_suggestions(eclc, suggestions: Suggestions):
             print(' (' + str(i) + ')')
             i += 1
         for t, sugs in suggestions.types_with_sugs:
-            print('-', util.a_or_an(t), eclc.color_commands(eclc.render_type(t)), end='')
-            print(': ', end='')
-            first = True
+            x = '- ' + util.a_or_an(t) + ' ' + eclc.color_commands(eclc.render_type(t)) + ': '
+            print(x, end='')
+            l = []
             for s, more in sugs:
-                if not first: print(' / ', end='')
-                print(eclc.color_commands(' '.join(s)) + ' ', end='')
-                if more: print('... ', end='')
-                print("(" + str(i) + ')', end='')
+                y = eclc.color_commands(' '.join(s)) + ' '
+                if more: y += '... '
+                y += '(' + str(i) + ')'
                 i += 1
-                first = False
-            print()
+                l.append(y)
+                l.append(' / ')
+            print(util.indented_and_wrapped(l[:-1], util.column_width(x)))
         if suggestions.types_without_sugs != []:
             print('-', util.commas_or([util.a_or_an(t) + ' ' + eclc.color_commands(eclc.render_type(t)) for t in suggestions.types_without_sugs]))

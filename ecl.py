@@ -141,8 +141,8 @@ class Context():
     def alias_definition_str(self, mode: Mode, pattern: Pattern, expansion: str, start_column=0) -> str:
         pat = self.render_pattern(pattern)
         r = self.color_mode(mode) + ' ' + self.color_commands(pat) + ' = '
-        indent = start_column + len(mode) + len(util.strip_markup(pat)) + len("  = ")
-        l = [self.color_commands(e) + ' ' for e in expansion.split()] # todo: handle '' args
+        indent = start_column + util.column_width(r)
+        l = [self.color_commands(e) + ' ' for e in expansion.split()] # todo: handle quoted arguments
         s = l[-1]; l[-1] = s[:-1] # remove last space
         return r + util.indented_and_wrapped(l, indent)
 
@@ -286,8 +286,7 @@ class Context():
         x = [self.colored(s, 'green') + ' ' for s in qexp[:pr.longest]] + \
             [self.colored(s, 'red') + ' ' for s in qexp[pr.longest:]]
         if pr.longest == len(exp): x.append(self.colored('???', 'red'))
-        s = util.indented_and_wrapped(x, 4)
-        msg = 'invalid command:\n  ' + s + '\n'
+        msg = 'invalid command:\n  ' + util.indented_and_wrapped(x, 3) + '\n'
         if pr.missing:
             msg += ('missing ' if pr.longest == len(exp) else 'expected ')
             msg += ' or '.join(map(self.render_unit, pr.missing)) + '\n'
@@ -321,7 +320,7 @@ class Context():
 
         errorpart = lambda: \
             'command ' + self.colored(' '.join(map(util.quote_if_necessary, input[:r.longest])), 'green') + \
-            ' matched alias:\n  ' + self.alias_definition_str(m, pattern, expansion, 4) + '\n'
+            ' matched alias:\n  ' + self.alias_definition_str(m, pattern, expansion, 3) + '\n'
 
         exp, _rest, err = self.substitute_variables(expansion, vars[:r.longest], enabled_modes)
         if err is not None: r.error = errorpart() + err; return r

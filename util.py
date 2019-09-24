@@ -22,17 +22,19 @@ def quote_if_necessary(s: str) -> str:
     return s
 
 ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
-def strip_markup(s):
+def strip_markup(s: str) -> str:
     return ansi_escape.sub('', s)
 
-def indented_and_wrapped(l, n):
+def column_width(s: str) -> int:
+    return len(strip_markup(s))
+
+def indented_and_wrapped(l: List[str], n: int) -> str:
     cols = (shutil.get_terminal_size().columns if sys.stdout.isatty() else 120)
     cur = n
     r = ''
-    l = [x + ' ' for x in ' '.join(l).split()]
     while l != []:
         s = l[0]
-        w = len(strip_markup(s))
+        w = column_width(s)
         if (cur + w <= cols) or r == '' or r.endswith('\n' + ' ' * n):
             cur += w
             r += s
