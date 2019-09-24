@@ -193,8 +193,7 @@ def italic(s):
 
 def clear_line():
     if not sys.stdout.isatty(): return
-    cols = shutil.get_terminal_size().columns
-    print('\r' + ' ' * cols + '\r', end='')
+    sys.stdout.write('\033[2K\033[1G')
     sys.stdout.flush()
 
 def truncate(s, n):
