@@ -37,7 +37,6 @@ auto_enable_cfg: Dict[ecl.Mode, AutoEnableConfig] = {}
 
 # options:
 prompt = True
-printactions = False
 color = True
 
 # active application detection:
@@ -190,11 +189,6 @@ def eval_command(words: List[str], line: str, enabled_modes: List[ecl.Mode], ign
     c = confirm_input(words, pr, line, ignore_0match)
     if pr.new_mode is not None:
         mode = pr.new_mode
-
-    if printactions:
-        actnames = [' '.join(w) for _, w in pr.actions]
-        if actnames and ' '.join(actnames) != ' '.join(words):
-            print(', '.join(actnames))
 
     ctx = {"enabled_modes": enabled_modes, 'ecl': eclc}
     attempt = None
@@ -434,7 +428,6 @@ home_dir: str = opt_home_dir
 @click.option('--color', default=True, type=bool)
 @click.option('--prompt', default=True, type=bool)
 @click.option('--modes', default='default', type=str)
-@click.option('--printactions', default=False, type=bool, is_flag=True)
 @click.option('--appdir', default=os.getenv('PWD'), type=str)
 @click.option('--configdir', default=home_dir + '/.evc-voice-commander',type=str)
 @click.option('--dryrun', default=False, type=bool, is_flag=True)
@@ -444,7 +437,7 @@ home_dir: str = opt_home_dir
     # (a) non-obnoxious, and
     # (b) won't interfere with speech recognition.
 @click.argument('cmd', nargs=-1)
-def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, cmd):
+def evc(color, prompt, modes, configdir, appdir, dryrun, volume, cmd):
     global cmdline_modes, mode
 
     cmdline_modes = modes.split(',')
@@ -454,7 +447,6 @@ def evc(color, prompt, modes, printactions, configdir, appdir, dryrun, volume, c
     globals()['appdir'] = appdir
     eclbuiltins.dryrun = dryrun
     globals()['prompt'] = prompt
-    globals()['printactions'] = printactions
 
     initial_words = list(cmd)
     if volume != 0: init_sound(volume)

@@ -133,7 +133,9 @@ def cmd_asynchronously(ctx, _, cmd):
 
 @make_builtin('run <word>+')
 def cmd_run(_ctx, _, cmd):
-    if dryrun: return
+    if dryrun:
+        print("running", cmd)
+        return
     subprocess.Popen(
         util.split_expansion(cmd), shell=False, close_fds=True,
         stdin=subprocess.DEVNULL,
@@ -142,7 +144,9 @@ def cmd_run(_ctx, _, cmd):
 
 @make_builtin('execute <word>+')
 def cmd_execute(ctx, _, cmd):
-    if dryrun: return
+    if dryrun:
+        print("executing", cmd)
+        return
     output = subprocess.Popen(
         util.split_expansion(cmd), shell=False,
         stdin=subprocess.PIPE,
@@ -302,7 +306,9 @@ def cmd_options(ctx, _):
 
 @make_builtin('text <word>+')
 def cmd_text(_ctx, _, s):
-    if not dryrun:
+    if dryrun:
+        print("entering text", s)
+    else:
         pyautogui.press([c for c in s])
 
 builtin_commands.append((ecl.parse_pattern('mode <mode>'), None, None))
@@ -313,7 +319,9 @@ def cmd_return(_ctx, _, w):
 
 @make_builtin('press <key>+')
 def cmd_press(_ctx, _, spec):
-    if dryrun: return
+    if dryrun:
+        print("pressing", spec)
+        return
     modifiers = []
     for key in util.split_expansion(spec):
         if key in modifier_keys:
@@ -335,3 +343,14 @@ def cmd_print(ctx, _, s):
 @make_functional_builtin('randomint <number>')
 def cmd_randomint(_ctx, _randomint, max):
     return str(random.randint(0, int(max) - 1))
+
+def run_actions(ctx, actions):
+    for act, args in actions:
+        act(ctx, *args)
+
+@make_builtin('<number> times <command>')
+def cmd_times_cmd(ctx, n, _times, cmd):
+    global jobs, next_job_nr
+    pr = ctx['ecl'].match_commands(util.split_expansion(cmd), [])
+    for _ in range(int(n)):
+        run_actions(ctx, pr.actions)

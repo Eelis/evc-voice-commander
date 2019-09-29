@@ -42,8 +42,7 @@ mode-map:
 control ():
     auto-enable: { always: True }
 
-    0 times <command>: '{}'
-    <positive> times <command>: $(builtin $0 minus 1) times $2 ; $2
+    <number> times <command>: ~builtin
 
     if true <command> else <command>: $2
     if false <command> else <command>: $4
@@ -405,6 +404,11 @@ arith-demo:
     fibonacci 0: return 0
     fibonacci 1: return 1
     fibonacci <number>: $(fibonacci $($1 minus 1)) plus $(fibonacci $($1 minus 2))
+
+    0 times <command>: '{}'
+    <positive> times <command>: $(builtin $0 minus 1) times $2 ; $2
+    # this works just like the builtin "times" command, but handles only a couple
+    # hundred iterations because the recursion translates directly into python recursion.
 
 <order>:
     - is less|greater than
