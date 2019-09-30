@@ -11,15 +11,21 @@ if [ "$#" -ne 1 ]; then
     exit
 fi
 
+function run-covered() {
+    python3-coverage run --source ecl,eclbuiltins,execute,eclcompletion,util --parallel-mode execute.py $*
+}
 
 function t() {
     echo $*
-    python3-coverage run --source ecl,eclbuiltins,execute,eclcompletion,util --parallel-mode execute.py --configdir=example_config --prompt=False --dryrun --volume=0 --color=False $*  | grep -v -e '^$'
+    run-covered --configdir=example_config --prompt=False --dryrun --volume=0 --color=False $*  | grep -v -e '^$'
 }
 
 rm -rf htmlcov .coverage*
 
 ########################### TEST CASES: ###########################
+
+echo computer print hello | run-covered --configdir=example_config > /dev/null
+    # to cover the prompt, color/sound, and process_lines()
 
 # repetition
 t computer 3 times print hello world
@@ -185,6 +191,9 @@ t --modes test-aliases erroneous subcommand
     #> command undefined variable matched alias:
     #>   test-aliases undefined variable = builtin print $nope
     #> undefined variable $nope
+
+t computer ktorrent options
+    #> in ktorrent: press <word>+, delete download
 
 python3-coverage combine
 python3-coverage html

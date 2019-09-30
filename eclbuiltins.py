@@ -164,12 +164,12 @@ def cmd_restart(_ctx, _restart, _commander):
 
 @make_builtin('keydown <key>')
 def cmd_keydown(_ctx, _keydown, key_name):
-    if not dryrun:
+    if not dryrun: # pragma: no cover
         pyautogui.keyDown(key_by_name(key_name))
 
 @make_builtin('keyup <key>')
 def cmd_keyup(_ctx, _keyup, key_name):
-    if not dryrun:
+    if not dryrun: # pragma: no cover
         pyautogui.keyUp(key_by_name(key_name))
 
 @make_builtin('shutdown commander')
@@ -258,50 +258,21 @@ def cmd_define(ctx, _, braced_cmd):
 
 @make_global_functional_builtin('options')
 def cmd_options(ctx, _):
-    mm = ctx['enabled_modes']
+    m = ctx['enabled_modes'][0]
     e = ctx['ecl']
     output = '\n'
-    modes = e.modes
-
-    def command_pattern(pat):
-        return e.color_commands(e.italic_types_in_pattern(pat)) + ', '
-
-    def simple_pattern(pat: ecl.Pattern):
-        return e.render_pattern(pat) + ', '
-
-    for m in mm:
-        indent = len(m) + len("in : ")
-        l = []
-        simples = []
-        for pat, exp in modes[m]:
-            if exp == 'builtin press $0': # todo
-                if len(pat) == 1:
-                    for alt in pat[0]:
-                        simples.append(simple_pattern(alt))
-                else:
-                    simples.append(simple_pattern(pat))
-            elif not pat.startswith('_'):
-                for form in pat.split('/'):
-                    if ' ' in form:
-                        l.append(command_pattern(form))
-                    else:
-                        for alt in form.split('|'):
-                            l.append(command_pattern(alt))
-        l += simples
+    indent = len(m) + len("in : ")
+    l = []
+    for pat, exp in e.modes[m]:
+        l.append(e.render_pattern(pat) + ', ')
         #for pat, exp in modes[m]:
         #    if pat in modes and pat != m and exp == 'builtin mode ' + pat:
         #        l.append(e.color_mode(pat) + ', ')
-        if l:
-            output += 'in ' + e.color_mode(m) + ': '
-            s = l[-1]; l[-1] = s[:-2] # remove last comma
-            output += util.indented_and_wrapped(l, indent) + '\n\n'
-
-    l = []#[e.italic_types_in_pattern(b) + ', ' for b, _ in builtin_commands if ecl.is_global_builtin_pattern(b)] # todo
     if l:
-        output += 'global: '
-        indent = len('global: ')
+        output += 'in ' + e.color_mode(m) + ': '
         s = l[-1]; l[-1] = s[:-2] # remove last comma
         output += util.indented_and_wrapped(l, indent) + '\n\n'
+
     return output
 
 @make_builtin('text <word>+')
@@ -309,7 +280,7 @@ def cmd_text(_ctx, _, s):
     if dryrun:
         print("entering text", s)
     else:
-        pyautogui.press([c for c in s])
+        pyautogui.press([c for c in s]) # pragma: no cover
 
 builtin_commands.append((ecl.parse_pattern('mode <mode>'), None, None))
 
@@ -319,9 +290,7 @@ def cmd_return(_ctx, _, w):
 
 @make_builtin('press <key>+')
 def cmd_press(_ctx, _, spec):
-    if dryrun:
-        print("pressing", spec)
-        return
+    if dryrun: print("pressing", spec)
     modifiers = []
     for key in util.split_expansion(spec):
         if key in modifier_keys:
@@ -329,11 +298,12 @@ def cmd_press(_ctx, _, spec):
         else:
             if not modifiers:
                 key = key_by_name(key)
-                pyautogui.press([key])
+                if not dryrun: pyautogui.press([key]) # pragma: no cover
             else:
                 keys = list(map(key_by_name, modifiers + [key]))
-                for k in keys: pyautogui.keyDown(k, pause=0.02)
-                for k in reversed(keys): pyautogui.keyUp(k, pause=0.02)
+                if not dryrun: # pragma: no cover
+                    for k in keys: pyautogui.keyDown(k, pause=0.02)
+                    for k in reversed(keys): pyautogui.keyUp(k, pause=0.02)
                 modifiers = []
 
 @make_builtin('print <word>+')
