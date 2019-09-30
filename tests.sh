@@ -130,7 +130,7 @@ t focus change lol
     #> - a <nextprev>: next ... (6) / previous ... (7)
     #> - a <hdir>: left (8) / right (9)
     #> - a <vdir>: up (10) / down (11)
-    #> - a <number>
+    #> - a <command> or a <number>
 
 t focus change new
     #> error: did you mean 'work space'?
@@ -143,3 +143,7 @@ t --modes=zsh,computer change
     #> - commands (1)
     #> - directory ... (2)
     #> - replacements (3)
+
+t computer press a press b
+    #> pressing a
+    #> pressing b

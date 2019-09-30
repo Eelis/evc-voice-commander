@@ -213,11 +213,11 @@ class Context():
                 x = self.match_parameter(sub, args, enabled_modes)
                 pr.longest += x.longest
                 if x.longest != 0: pr.missing = x.missing
+                else: pr.missing += x.missing
                 if x.error is not None: pr.error = x.error
+                if x.retval is not None: y.append(x.retval)
                 if x.retval is None or x.longest == 0 or x.error is not None:
-                    pr.retval = None
-                    return pr
-                y.append(x.retval)
+                    break
                 args = args[x.longest:]
             pr.retval = ' '.join(map(util.quote_if_necessary, y))
             return pr
@@ -414,7 +414,7 @@ class Context():
             r.missing = ['<command>']
             r.actions = []
         else:
-            if r.longest != len(words) and r.error is None and not r.missing:
+            if r.longest != len(words) and r.error is None:
                 w = words[r.longest:]
                 if w and w[0] == ';':
                     if stop_on_semicolon: return r
@@ -427,7 +427,10 @@ class Context():
                     r2 = self.match_commands(w, enabled_modes, True, stop_on_semicolon)
                     r.longest += r2.longest
                     r.resolved += r2.resolved
-                    r.missing = r2.missing
+                    if r2.longest == 0:
+                        r.missing += r2.missing
+                    else:
+                        r.missing = r2.missing
                     r.actions += r2.actions
                     if r2.error is not None: r.error = r2.error
                     if r2.longest != 0:
