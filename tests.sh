@@ -153,5 +153,12 @@ t computer press a press b
 t computer 2 times lol
     #> error: expected a <command>
 
+t --modes bad-aliases wrapper
+    #> error: command wrapper matched alias:
+    #>   bad-aliases wrapper = undefined variable
+    #> command undefined variable matched alias:
+    #>   bad-aliases undefined variable = builtin print $nope
+    #> undefined variable $nope
+
 python3-coverage combine
 python3-coverage html
