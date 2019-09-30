@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ev
 
 if [ "$#" -ne 1 ]; then
     expected=/tmp/evc-tests-expected-output
@@ -14,8 +14,10 @@ fi
 
 function t() {
     echo $*
-    python3 execute.py --configdir=example_config --prompt=False --dryrun --volume=0 --color=False $*  | grep -v -e '^$'
+    python3-coverage run --source ecl,eclbuiltins,execute,eclcompletion,util --parallel-mode execute.py --configdir=example_config --prompt=False --dryrun --volume=0 --color=False $*  | grep -v -e '^$'
 }
+
+rm -rf htmlcov .coverage*
 
 ########################### TEST CASES: ###########################
 
@@ -147,3 +149,6 @@ t --modes=zsh,computer change
 t computer press a press b
     #> pressing a
     #> pressing b
+
+python3-coverage combine
+python3-coverage html
