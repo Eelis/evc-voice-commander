@@ -138,13 +138,16 @@ t focus change lol
     #> - a <nextprev>: next ... (6) / previous ... (7)
     #> - a <hdir>: left (8) / right (9)
     #> - a <vdir>: up (10) / down (11)
-    #> - a <command> or a <number>
+    #> - a <number>
 
 t focus change new
     #> error: did you mean 'work space'?
 
 t computer what time
     #> error: did you mean 'is it'?
+
+t computer what print hello
+    #> error: did you mean 'time is it'?
 
 t --modes=zsh,computer change
     #> error: expected:
@@ -157,7 +160,7 @@ t computer press a press b
     #> pressing b
 
 t computer 2 times lol
-    #> error: expected a <command>
+    #> error: no such command
 
 t --modes test-aliases wrapper
     #> error: command wrapper matched alias:

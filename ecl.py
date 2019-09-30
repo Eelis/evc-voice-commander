@@ -407,7 +407,7 @@ class Context():
             r.missing = ['<command>']
             r.actions = []
         else:
-            if r.longest != len(words) and r.error is None:
+            if r.longest != len(words) and r.error is None and not r.missing:
                 w = words[r.longest:]
                 if w and w[0] == ';':
                     if stop_on_semicolon: return r
