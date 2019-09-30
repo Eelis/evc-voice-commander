@@ -195,5 +195,9 @@ t --modes test-aliases erroneous subcommand
 t computer ktorrent options
     #> in ktorrent: press <word>+, delete download
 
+t --modes=test-aliases ding
+    #> error: expected a <vdir>:
+    #>   up (1) / down (2)
+
 python3-coverage combine
 python3-coverage html

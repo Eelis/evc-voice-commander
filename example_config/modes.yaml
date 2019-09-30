@@ -419,6 +419,7 @@ test-aliases:
     wrapper2: undefined command
     unmatched closing curly: "}"
     empty: ""
+    ding <vdir>: builtin print ok
 
 <order>:
     - is less|greater than
