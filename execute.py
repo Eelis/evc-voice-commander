@@ -424,7 +424,7 @@ def init_sound(volume: float):
             [0 for x in range(int(trailing_silence * sampleRate))]
             ).astype(numpy.int16))
 
-    good_beep = make_beep(950, 12000, 0.1, 0.05)
+    good_beep = make_beep(950, 12000, 0.08, 0.04)
     bad_beep = make_beep(210, 31000, 0.15)
 
     good_beep.set_volume(volume)
