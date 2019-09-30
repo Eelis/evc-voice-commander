@@ -410,9 +410,15 @@ arith-demo:
     # this works just like the builtin "times" command, but handles only a couple
     # hundred iterations because the recursion translates directly into python recursion.
 
-bad-aliases:
+test-aliases:
     undefined variable: builtin print $nope
+    undefined command: nope
+    undefined subcommand: $(nope)
+    erroneous subcommand: $(undefined variable)
     wrapper: undefined variable
+    wrapper2: undefined command
+    unmatched closing curly: "}"
+    empty: ""
 
 <order>:
     - is less|greater than

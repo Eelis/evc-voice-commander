@@ -123,7 +123,7 @@ class Context():
     def colored(self, s: str, c: str) -> str:
         return termcolor.colored(s, c) if self.color else s
 
-    def italic(self, s: str) -> str:
+    def italic(self, s: str) -> str: # pragma: no cover
         return util.italic(s) if self.color else s
 
     def color_mode(self, m: Mode) -> str:
@@ -295,13 +295,10 @@ class Context():
         x = [self.colored(s, 'green') + ' ' for s in qexp[:pr.longest]] + \
             [self.colored(s, 'red') + ' ' for s in qexp[pr.longest:]]
         if pr.longest == len(exp): x.append(self.colored('???', 'red'))
-        msg = 'invalid command:\n  ' + util.indented_and_wrapped(x, 3) + '\n'
-        if pr.missing:
-            msg += ('missing ' if pr.longest == len(exp) else 'expected ')
-            msg += ' or '.join(map(self.render_unit, pr.missing)) + '\n'
-        elif pr.longest != len(exp):
-            msg += "unexpected " + exp[pr.longest]
-        return msg
+        assert pr.missing
+        return ('invalid command:\n  ' + util.indented_and_wrapped(x, 3) + '\n' +
+               ('missing ' if pr.longest == len(exp) else 'expected ') +
+               ' or '.join(map(self.render_unit, pr.missing)) + '\n')
 
     def match_alias(self, input: List[str],
             enabled_modes: List[Mode],
@@ -342,8 +339,6 @@ class Context():
             r.actions = sub.actions
             r.new_mode = sub.new_mode
             r.retval = sub.retval
-            if sub.error is not None:
-                r.error = errorpart() + sub.error
         return r
 
     def match_builtin(self, input: List[str], enabled_modes: List[Mode], only_global: bool) -> ParseResult[Any]:
@@ -393,8 +388,7 @@ class Context():
     def match_commands(self, words: List[str], enabled_modes: List[Mode],
             handle_builtins: bool = True,
             stop_on_semicolon: bool = False) -> ParseResult:
-        if not words or words[:1] == ['}']:
-            return ParseResult[Any](None)
+        assert words and words[0] != '}'
 
         x = util.try_parse_braced_expr(words[0])
         if x is not None and x[1] == '':
@@ -426,10 +420,7 @@ class Context():
                     r2 = self.match_commands(w, enabled_modes, True, stop_on_semicolon)
                     r.longest += r2.longest
                     r.resolved += r2.resolved
-                    if r2.longest == 0:
-                        r.missing += r2.missing
-                    else:
-                        r.missing = r2.missing
+                    r.missing = (r.missing if r2.longest == 0 else []) + r2.missing
                     r.actions += r2.actions
                     if r2.error is not None: r.error = r2.error
                     if r2.longest != 0:

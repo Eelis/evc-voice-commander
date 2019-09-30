@@ -153,11 +153,37 @@ t computer press a press b
 t computer 2 times lol
     #> error: expected a <command>
 
-t --modes bad-aliases wrapper
+t --modes test-aliases wrapper
     #> error: command wrapper matched alias:
-    #>   bad-aliases wrapper = undefined variable
+    #>   test-aliases wrapper = undefined variable
     #> command undefined variable matched alias:
-    #>   bad-aliases undefined variable = builtin print $nope
+    #>   test-aliases undefined variable = builtin print $nope
+    #> undefined variable $nope
+
+t --modes test-aliases wrapper2
+    #> error: command wrapper2 matched alias:
+    #>   test-aliases wrapper2 = undefined command
+    #> command undefined command matched alias:
+    #>   test-aliases undefined command = nope
+    #> invalid command:
+    #>   nope 
+    #> expected <command>
+
+t --modes test-aliases undefined subcommand
+    #> error: command undefined subcommand matched alias:
+    #>   test-aliases undefined subcommand = $(nope)
+    #> invalid command:
+    #>   nope 
+    #> expected <command>
+
+t --modes test-aliases unmatched closing curly
+    #> unmatched closing curly: unmatched }
+
+t --modes test-aliases erroneous subcommand
+    #> error: command erroneous subcommand matched alias:
+    #>   test-aliases erroneous subcommand = $(undefined variable)
+    #> command undefined variable matched alias:
+    #>   test-aliases undefined variable = builtin print $nope
     #> undefined variable $nope
 
 python3-coverage combine

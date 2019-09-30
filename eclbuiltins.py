@@ -350,7 +350,6 @@ def run_actions(ctx, actions):
 
 @make_builtin('<number> times <command>')
 def cmd_times_cmd(ctx, n, _times, cmd):
-    global jobs, next_job_nr
     pr = ctx['ecl'].match_commands(util.split_expansion(cmd), [])
     for _ in range(int(n)):
         run_actions(ctx, pr.actions)
