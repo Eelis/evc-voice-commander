@@ -150,5 +150,8 @@ t computer press a press b
     #> pressing a
     #> pressing b
 
+t computer 2 times lol
+    #> error: expected a <command>
+
 python3-coverage combine
 python3-coverage html

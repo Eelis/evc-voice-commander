@@ -196,7 +196,6 @@ class Context():
             x = self.match_commands(args, enabled_modes, True, True)
             consumed = list(map(util.quote_if_necessary, args[:x.longest]))
             if x.longest == 0:
-                x.missing = ['<command>']
                 x.retval = None
             elif x.resolved is not None:
                 consumed = x.resolved
