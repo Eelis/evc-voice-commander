@@ -404,18 +404,28 @@ def hidden_cursor():
 
 def init_sound(volume: float):
     global good_beep, bad_beep
+    import numpy
     import pygame # type: ignore
+    import pygame.sndarray
 
     if pygame.version.vernum.major < 2:
         raise Exception("pygame < 2 has severe CPU usage bugs that interfere with speech recognition")
 
-    pygame.mixer.pre_init(44100, -16, 2, 512)
+    sampleRate = 44100
+
+    pygame.mixer.pre_init(sampleRate, -16, 1, 512)
         # without the pre_init, there is a ~300ms delay when you play a sound..
     pygame.mixer.init()
     pygame.init()
 
-    good_beep = pygame.mixer.Sound('sounds/good.wav')
-    bad_beep = pygame.mixer.Sound('sounds/bad.wav')
+    def make_beep(freq, volume, duration, trailing_silence=0):
+        return pygame.sndarray.make_sound(numpy.array(
+            [volume * numpy.sin(2.0 * numpy.pi * freq * x / sampleRate) for x in range(int(duration * sampleRate))] +
+            [0 for x in range(int(trailing_silence * sampleRate))]
+            ).astype(numpy.int16))
+
+    good_beep = make_beep(950, 12000, 0.1, 0.05)
+    bad_beep = make_beep(210, 31000, 0.15)
 
     good_beep.set_volume(volume)
     bad_beep.set_volume(volume)
