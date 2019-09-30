@@ -425,13 +425,13 @@ if opt_home_dir is None: raise Exception('HOME not set')
 home_dir: str = opt_home_dir
 
 @click.command()
-@click.option('--color', default=True, type=bool)
-@click.option('--prompt', default=True, type=bool)
-@click.option('--modes', default='default', type=str)
-@click.option('--appdir', default=os.getenv('PWD'), type=str)
-@click.option('--configdir', default=home_dir + '/.evc-voice-commander',type=str)
-@click.option('--dryrun', default=False, type=bool, is_flag=True)
-@click.option('--volume', default=(0 if sys.stdin.isatty() else 0.1), type=float)
+@click.option('--color', default=True, type=bool, show_default=True)
+@click.option('--prompt', default=True, type=bool, show_default=True)
+@click.option('--modes', default='default', type=str, show_default=True)
+@click.option('--appdir', default=os.getenv('PWD'), type=str, show_default=True)
+@click.option('--configdir', default=home_dir + '/.evc-voice-commander',type=str, show_default=True)
+@click.option('--dryrun', default=False, type=bool, is_flag=True, show_default=True)
+@click.option('--volume', default=(0 if sys.stdin.isatty() else 0.1), type=float, show_default=True)
     # stdin not being a tty is interpreted to mean the input is coming
     # from speech, hence we enable sound, but with low volume so our beeps are
     # (a) non-obnoxious, and
