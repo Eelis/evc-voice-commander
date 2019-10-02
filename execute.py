@@ -46,6 +46,7 @@ current_windowprocesses = {}
 # evc state:
 mode: ecl.Mode = 'default'
 suggestions = None
+all_good_beep = None
 good_beep = None
 bad_beep = None
 
@@ -325,7 +326,12 @@ def confirm_input(words: List[str], pr, original_input, ignore_0match):
             print('\n  ', end='')
             printed = '  '
 
-    if good_beep is not None and n != 0:
+    all_good = (n == len(words) and not pr.missing and pr.error is None)
+
+    if all_good:
+        if all_good_beep is not None:
+            all_good_beep.play()
+    elif good_beep is not None and n != 0:
         good_beep.play(n - 1)
 
     i = 0
@@ -336,11 +342,11 @@ def confirm_input(words: List[str], pr, original_input, ignore_0match):
             print(x, end='')
             sys.stdout.flush()
             printed += x
-        if good_beep is not None:
+        if not all_good and good_beep is not None:
             time.sleep(good_beep.get_length())
         i += 1
 
-    if bad_beep is not None and (n != len(words) or pr.missing or pr.error is not None):
+    if not all_good and bad_beep is not None:
         bad_beep.play()
 
     if prompt:
@@ -403,7 +409,7 @@ def hidden_cursor():
         if b: sys.stdout.write("\033[?25h") # restore cursor
 
 def init_sound(volume: float):
-    global good_beep, bad_beep
+    global good_beep, bad_beep, all_good_beep
     import numpy
     import pygame # type: ignore
     import pygame.sndarray
@@ -424,9 +430,11 @@ def init_sound(volume: float):
             [0 for x in range(int(trailing_silence * sampleRate))]
             ).astype(numpy.int16))
 
+    all_good_beep = make_beep(1050, 12000, 0.07, 0.04)
     good_beep = make_beep(950, 12000, 0.08, 0.04)
     bad_beep = make_beep(210, 31000, 0.15)
 
+    all_good_beep.set_volume(volume)
     good_beep.set_volume(volume)
     bad_beep.set_volume(volume)
 
