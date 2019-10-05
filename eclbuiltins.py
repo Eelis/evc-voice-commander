@@ -90,6 +90,10 @@ def cmd_get(ctx, _get, var):
     e = ctx['ecl']
     return e.script_vars[var] if var in e.script_vars else 'undefined'
 
+@make_functional_builtin('head <word>')
+def cmd_head(_, _head, w):
+    return w[:1]
+
 jobs: Dict[int, str] = {}
 next_job_nr = 0
 
