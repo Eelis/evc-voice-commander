@@ -5,7 +5,6 @@
 <hdir>: left/right
 <direction>: <hdir>/<vdir>
 <nextprev>: next/previous
-
 <plural-time-unit>: seconds|minutes|hours|days|weeks|months|years
 
 <duration>: <number> <plural-time-unit>
@@ -26,7 +25,7 @@ duration:
 
 # mode map (lets you refer to modes by another name):
 
-<ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster|container
+<ext-mode>: <mode>|edit|web|mail|terminal|shell|cluster|container|chat
 mode-map:
     <mode>: builtin mode $0
     edit: vim
@@ -36,6 +35,7 @@ mode-map:
     shell: zsh
     cluster: kubectl
     container: docker
+    chat: irssi
 
 # control structures
 
@@ -62,7 +62,7 @@ control ():
         stop dictation
         builtin mode default
 
-    thank you: thank-you-reply $( builtin randomint 4 ) ; stop
+    thank you: thank-you-reply $(builtin randomint 4) ; stop
     thank-you-reply 0: computer say no problem
     thank-you-reply 1: computer say my pleasure
     thank-you-reply 2: computer say sure thing
@@ -77,11 +77,28 @@ default (): # the () specifies an empty prompt string, meaning 'omit this mode f
     computer|focus: builtin mode $0
     <screen>: focus $0
 
-computer (comp): # general commands
-    <ext-mode>: ~mode-map
-    print <word>+/press <key>+/run <word>+/text <word>+: ~builtin
+# text entry:
+
+text-entry ():
+    auto-enable:
+        always: True
+    press <key>+/text <word>+: ~builtin
     press <number> times <key>+: $1 times press $3
     press <key> <number> times: $2 times press $1
+    letter <word>: press $(builtin head $1)
+    slash|backspace|home|<direction>|space: press $0
+        # we omit 'escape' from this list, because sometimes we
+        # want 'escape' to do more than merely pressing escape.
+        # for example, when we escape during vim-insert mode, we
+        # want to switch to normal vim mode.
+    page <vdir>: press page$1
+    <number> <vdir>: press $0 times $1
+
+# general commands:
+
+computer (comp):
+    <ext-mode>: ~mode-map
+    print <word>+/run <word>+: ~builtin
     restart commander/shutdown commander/jobs/mode <mode>/window processes: ~builtin
     change commands: in new terminal run vim "$configdir/modes.yaml"
     change replacements: in new terminal run vim "$configdir/replacements.yaml"
@@ -116,7 +133,7 @@ computer (comp): # general commands
     delete file <file>:
         if in shell { text rm "$2" ; press enter }
         else run rm "$2"
-    show files:
+    list|show files:
         if in shell { text ls -l ; press enter }
         else { in new shell run unset LESS; ls -l | less -r }
     tree:
@@ -148,7 +165,6 @@ computer (comp): # general commands
     - <direction> <number> times
 
 focus: # wm commands
-    press <word>+: ~computer
     <mode>: builtin mode $0
 
     mark: press wmkey d
@@ -175,20 +191,15 @@ focus: # wm commands
 
 top:
     auto-enable: { for-applications: top }
-    press <word>+: ~computer
     finish: press q
 
 less:
     auto-enable: { for-applications: less }
-    press <word>+: ~computer
-    page <vdir>: press page$1
     finish: press q
     find: press slash
 
 thunderbird (mail):
     auto-enable: { for-applications: thunderbird }
-    text <word>+: ~builtin
-    press <word>+: ~computer
     home|delete|escape|<vdir>: press $0
     next: press f
     select <number>: keydown shift  press $1 times down ; press up ; keyup shift
@@ -200,8 +211,6 @@ firefox-navigate:
 
 firefox (web):
     auto-enable: { for-applications: firefox firefox-bin }
-    text <word>+: ~builtin
-    press <word>+: ~computer
     home|escape|delete|<direction>|space: press $0
     erase: press shift home delete
     small: press control 0
@@ -225,8 +234,6 @@ firefox (web):
     next: press control pagedown
 
 vim-find:
-    text <word>+: ~builtin
-    press <word>+: ~computer
     slash|backspace: press $0
     go: press enter ; builtin mode vim
     escape: press escape ; builtin mode vim
@@ -235,8 +242,6 @@ vim-find:
     correction: delete last word
 
 vim-insert:
-    text <word>+: ~builtin
-    press <word>+: ~computer
     slash/space/semicolon/backspace/period/dollar/percent/colon: press $0
     single|double quote: press "$0 $1"
     escape: press escape ; builtin mode vim
@@ -250,7 +255,6 @@ vim-insert:
 
 vim:
     auto-enable: { for-applications: vim }
-    press <word>+: ~computer
     submode <word>: builtin mode vim-$1
     escape|delete|enter|<direction>: press $0
     page <vdir>: press page$1
@@ -287,14 +291,11 @@ vim:
 
 vlc:
     auto-enable: { for-applications: vlc }
-    press <word>+: ~computer
     full screen: press f
     finish: press control q
 
 zsh (shell):
     auto-enable: { for-leaf-applications: zsh }
-    text <word>+: ~builtin
-    press <word>+: ~computer
     do it: press enter
     again: press up enter
     page <vdir>: press shift page$1
@@ -314,14 +315,12 @@ zsh (shell):
 
 urxvt (term):
     auto-enable: { for-applications: urxvt }
-    press <word>+: ~computer
     zoom in: press control plus # needs to be enabled in urxvt config
     zoom out: press control minus
     magnify: zoom in
 
 gitk:
     auto-enable: { for-suffixes: ['- gitk'] }
-    press <word>+: ~computer
     <vdir>: press $0
     <number> <vdir>: press $0 times $1
     change <target>: focus change $1
@@ -336,7 +335,6 @@ sound:
 
 python-repl (python):
     auto-enable: { for-leaf-applications: python3 }
-    press <word>+: ~computer
     finish: press control d
 
 docker:
@@ -344,7 +342,6 @@ docker:
 
 orage:
     auto-enable: { for-applications: orage }
-    press <word>+: ~computer
     finish: press control q
 
 <kube-obj-type>: pod|node|service|deployment
@@ -441,5 +438,4 @@ calculate (calc):
 
 ktorrent:
     auto-enable: { for-applications: ktorrent }
-    press <word>+: ~computer
     delete download: press control delete

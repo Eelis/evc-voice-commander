@@ -196,7 +196,7 @@ t --modes test-aliases erroneous subcommand
     #> undefined variable $nope
 
 t computer ktorrent options
-    #> in ktorrent: press <word>+, delete download
+    #> in ktorrent: delete download
 
 t --modes=test-aliases ding
     #> error: expected a <vdir>:
