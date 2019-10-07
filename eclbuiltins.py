@@ -44,7 +44,7 @@ def key_by_name(name) -> str:
     return (extra_key_names[name] if name in extra_key_names else name)
 
 def is_keyname(s) -> bool:
-    return s in pyautogui.KEY_NAMES or s in extra_key_names
+    return s != 'stop' and (s in pyautogui.KEY_NAMES or s in extra_key_names)
 
 modifier_keys = ['shift', 'control', 'alt', 'wmkey']
 
