@@ -217,7 +217,7 @@ def maybe_pick_suggestion(words: List[str], linsugs: List[List[str]]) -> Optiona
 
 async def process_lines(input):
     import asyncio
-    global current_windowtitle, current_windowprocesses
+    global current_windowtitle, current_windowprocesses, suggestions
     loop = asyncio.get_event_loop()
     reader = asyncio.StreamReader(loop=loop, limit=asyncio.streams._DEFAULT_LIMIT) # type: ignore
     await loop.connect_read_pipe(
@@ -263,6 +263,7 @@ async def process_lines(input):
                     p = maybe_pick_suggestion(words, eclcompletion.linear_suggestions(suggestions))
                     if p is not None:
                         words = successful_input + p
+                        suggestions = None
                 enabled_modes = get_active_modes()
                 longest = eval_command(words, line, enabled_modes, True)
                 if longest != 0:
