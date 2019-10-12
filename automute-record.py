@@ -12,21 +12,13 @@ import numpy
 import sys
 import time
 
-output_to_watch = "Monitor of Built-in Audio Analog Stereo"
-mic_name = "UMC202HD 192k Analog Stereo"
-
 deactivate_if_output_louder_than = 0.05
 activate_if_mic_louder_than = 0.53
 extend_active_if_mic_louder_than = 0.1
 output_volume_when_active = 0.1
 
-def find_mic():
-    for mic in soundcard.all_microphones():
-        if mic.name == mic_name:
-            return mic
-    raise Exception('could not find microphone: "' + mic_name + '"')
-
 def find_output():
+    output_to_watch = 'Monitor of ' + soundcard.default_speaker().name
     for mic in soundcard.all_microphones(include_loopback=True):
         if mic.name == output_to_watch:
             return mic
@@ -51,12 +43,12 @@ def read_output(output):
                     last_significant_output = time.time()
                     break
 
-sink = get_sink()
-
 def read_mic(mic):
-    orig_volume = None
+    sink = get_sink()
+    orig_volume = sink.volume.values.copy()
     muting = False
     last_significant_input = 0
+    last_tick = 0
     with mic.recorder(samplerate=sample_rate, channels=[-1]) as rec:
         while True:
             data = rec.record(numframes = sample_rate / 20)
@@ -79,20 +71,27 @@ def read_mic(mic):
                         last_significant_input = now
                         break
 
+            # track current volume so we know it when we have to unmute:
+            if not muting and now - last_tick > 5:
+                orig_volume = get_sink().volume.values.copy()
+                last_tick = now
+                # We don't want to have to query the volume at the moment we mute,
+                # because querying can take some time and we want muting to be immediate.
+                # We don't use 'sink' here because it does not track volume changes.
+
             if muting and now - last_significant_input > 2:
                 # unmute:
                 pulse.volume_set(sink, pulsectl.PulseVolumeInfo(orig_volume))
                 muting = False
             elif not muting and now - last_significant_input < 2:
                 # mute:
-                orig_volume = sink.volume.values.copy()
                 new_volume = pulsectl.PulseVolumeInfo(output_volume_when_active, len(orig_volume))
                 pulse.volume_set(sink, new_volume)
                 muting = True
 
 
 output = find_output()
-mic = find_mic()
+mic = soundcard.default_microphone()
 
 threading.Thread(target=lambda: read_output(output)).start()
 read_mic(mic)
